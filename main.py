@@ -80,10 +80,11 @@ def proceed_problem1(
             return data
         return [data] + [traversed(node) for node in subtree]
 
-    def parsed(paragraphs: str):
+    def parsed(paragraphs: List[str]):
         regex = re.compile(r"\?|\.")
         # TODO: Fix the problem caused by parsing "Prof." "Dr." and so on.
         return (regex.split(p.text).strip() for p in paragraphs)
+
     # Create an empty tree :math:`T`.
     tree = construct_tree_from(url=url, delta_=delta_)
     nodes = traversed(tree)
@@ -165,9 +166,8 @@ def proceed_problem3(
     """
 
     # Feed each vector :math:`v \in V` to SVM.
-    svm = None
+    svm: typing.Any
     for v in V:
-        svm
         break
     c: NewsCategory = NewsCategory.Default
     return int(c)
