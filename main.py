@@ -1,6 +1,7 @@
 # %%
 import enum
 import re
+import sys
 import typing
 from typing import List, Set
 
@@ -18,8 +19,8 @@ class NewsCategory(enum.Enum):
 
 
 # %%
-DELTA = 1
-GAMMA = 1
+DELTA = 3
+GAMMA = 3
 SIGMA = 3
 
 
@@ -43,7 +44,7 @@ def proceed_problem1(
     Returns:
         List[Sentense] -- Array of all derived sentences
     """
-    def construct_tree_from(url, delta_):
+    def construct_tree_from(url, *, delta_, gamma=gamma):
         if delta_ < 0:
             raise ValueError(
                 f"Max. depth delta_ must be positive. (delta_ = {delta_})")
@@ -54,8 +55,7 @@ def proceed_problem1(
         # Starting from :math:`u`, get the web page HTML script.
         # Insert :math:`u` into the tree as root.
         response = requests.get(url)
-        if 200 != response.status_code:
-            return tree
+        response.raise_for_status()
         soup = BeautifulSoup(response.content, "lxml")
         tree["data"] = {"url": url, "content": soup}
 
@@ -63,11 +63,17 @@ def proceed_problem1(
             return tree
 
         nodes = []
-        for anchor, __ in zip(soup.find_all("a"), range(gamma)):
-            # From HTML script, get new URLs
-            nodes.append(construct_tree_from(
-                url=anchor["href"], delta_=delta_-1))
-            # Apply until tree reaches depth :math:`δ`.
+        for anchor in soup.find_all("a", limit=gamma):
+            try:
+                # From HTML script, get new URLs
+                # Apply until tree reaches depth :math:`δ`.
+                nodes.append(construct_tree_from(
+                    url=anchor["href"], delta_=delta_-1, gamma=gamma))
+            except requests.exceptions.MissingSchema as ex:
+                print(ex, file=sys.stderr)
+            except requests.HTTPError as ex:
+                print(ex, file=sys.stderr)
+
         # Create new children not exceeding :math:`γ`.
         tree["nodes"] = nodes
         return tree
@@ -75,18 +81,25 @@ def proceed_problem1(
     def traversed(tree: dict) -> list:
         if not tree:
             raise ValueError("A tree node must have each value.")
-        data, subtree = tree["data"], tree["nodes"]
-        if not subtree:
-            return data
-        return [data] + [traversed(node) for node in subtree]
+        data, subtrees = tree["data"], tree["nodes"]
+        if data:
+            yield data
+        if subtrees:
+            for subtree in subtrees:
+                yield from traversed(subtree)
 
-    def parsed(paragraphs: List[str]):
-        regex = re.compile(r"\?|\.")
+    def parsed(soup: BeautifulSoup, *, sigma=sigma):
+        regex = re.compile(r"\!|\?|\.")
         # TODO: Fix the problem caused by parsing "Prof." "Dr." and so on.
-        return (regex.split(p.text).strip() for p in paragraphs)
+        paragraphs = soup.find_all("p", limit=sigma)
+        for p in paragraphs:
+            sentenses: List[str] = regex.split(p.text)
+            for s in sentenses:
+                if s.strip():
+                    yield s.strip()
 
     # Create an empty tree :math:`T`.
-    tree = construct_tree_from(url=url, delta_=delta_)
+    tree = construct_tree_from(url=url, delta_=delta_, gamma=gamma)
     nodes = traversed(tree)
 
     # Create an empty array :math:`\mathcal{X}`.
@@ -94,15 +107,14 @@ def proceed_problem1(
 
     for node in nodes:
         url, soup = node["url"], node["content"]
-        # response = requests.get(url)
-        # soup = BeautifulSoup(response.content, "lxml")
-        paragraphs = soup.find_all("p")
-        sentense_list.extend(
-            s for s, __ in zip(parsed(paragraphs), range(sigma))
-            )
-    # Now, traverse each node :math:`n` in :math:`T`
-    # and derive maximum :math:`σ` sentences.
-    # Add each sentence :math:`s` into :math:`\mathcal{X}`.
+
+        # Now, traverse each node :math:`n` in :math:`T`
+        # and derive maximum :math:`σ` sentences.
+        # Add each sentence :math:`s` into :math:`\mathcal{X}`.
+        sentense_list.append({
+            "url": url,
+            "content": list(parsed(soup, sigma=sigma)),
+        })
     # Repeat until all nodes are traversed.
 
     return sentense_list
@@ -170,7 +182,7 @@ def proceed_problem3(
     for v in V:
         break
     c: NewsCategory = NewsCategory.Default
-    return int(c)
+    return c.value
 
 # %%
 
