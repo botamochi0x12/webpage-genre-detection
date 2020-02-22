@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 
 uint = typing.NewType("unsigned_int", int)
 URL = typing.NewType("URL", str)
-Sentense = typing.NewType("Sentense", str)
+Sentence = typing.NewType("Sentence", str)
 Table = typing.Dict
 
 
@@ -29,7 +29,7 @@ def proceed_problem1(
         delta_: uint = DELTA,
         gamma: uint = GAMMA,
         sigma: uint = SIGMA,
-) -> List[Sentense]:
+) -> List[Sentence]:
     r"""Create a web page tree to parse
 
     Arguments:
@@ -38,11 +38,11 @@ def proceed_problem1(
     Keyword Arguments:
         delta_ {uint} -- Max. depth of each tree (default: {DELTA})
         gamma {uint} -- Max. number of children of each node (default: {GAMMA})
-        sigma {uint} -- Max. number of sentense of each web-page
+        sigma {uint} -- Max. number of sentence of each web-page
             (default: {SIGMA})
 
     Returns:
-        List[Sentense] -- Array of all derived sentences
+        List[Sentence] -- Array of all derived sentences
     """
     def construct_tree_from(url, *, delta_, gamma=gamma):
         if delta_ < 0:
@@ -93,8 +93,8 @@ def proceed_problem1(
         # TODO: Fix the problem caused by parsing "Prof." "Dr." and so on.
         paragraphs = soup.find_all("p", limit=sigma)
         for p in paragraphs:
-            sentenses: List[str] = regex.split(p.text)
-            for s in sentenses:
+            sentences: List[str] = regex.split(p.text)
+            for s in sentences:
                 if s.strip():
                     yield s.strip()
 
@@ -103,7 +103,7 @@ def proceed_problem1(
     nodes = traversed(tree)
 
     # Create an empty array :math:`\mathcal{X}`.
-    sentense_list: List[Sentense] = list()
+    sentence_list: List[Sentence] = list()
 
     for node in nodes:
         url, soup = node["url"], node["content"]
@@ -111,13 +111,13 @@ def proceed_problem1(
         # Now, traverse each node :math:`n` in :math:`T`
         # and derive maximum :math:`σ` sentences.
         # Add each sentence :math:`s` into :math:`\mathcal{X}`.
-        sentense_list.append({
+        sentence_list.append({
             "url": url,
             "content": list(parsed(soup, sigma=sigma)),
         })
     # Repeat until all nodes are traversed.
 
-    return sentense_list
+    return sentence_list
 
 
 # %%
@@ -125,13 +125,13 @@ ENGLISH_WORD_WITH_PARAMATER_DICTIONARY = None
 
 
 def proceed_problem2(
-        sentense: Sentense,
+        sentence: Sentence,
         english_dictionary=ENGLISH_WORD_WITH_PARAMATER_DICTIONARY,
 ) -> List[bool]:
     r"""Creation of a parse vector generated from the input.
 
     Arguments:
-        sentense {Sentense} -- An English sentence from the web page tree
+        sentence {Sentence} -- An English sentence from the web page tree
 
     Keyword Arguments:
         english_dictionary -- Dictionary of English words
@@ -147,7 +147,7 @@ def proceed_problem2(
 
     # For each :math:`s` in :math:`S`, match :math:`s`
     # with a tuple :math:`w` in :math:`D` or ``null``.
-    vec = [sentense == w for w in english_dictionary]
+    vec = [sentence == w for w in english_dictionary]
 
     # Match the index of tuple :math:`w` in :math:`D`,
     # replace :math:`v[i]` by 1.
