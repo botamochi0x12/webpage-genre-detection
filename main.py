@@ -63,6 +63,7 @@ def proceed_problem1(
             return tree
 
         nodes = []
+        # Create new children not exceeding :math:`γ`.
         for anchor in soup.find_all("a", limit=gamma):
             try:
                 # From HTML script, get new URLs
@@ -74,7 +75,6 @@ def proceed_problem1(
             except requests.HTTPError as ex:
                 print(ex, file=sys.stderr)
 
-        # Create new children not exceeding :math:`γ`.
         tree["nodes"] = nodes
         return tree
 
@@ -89,8 +89,9 @@ def proceed_problem1(
                 yield from traversed(subtree)
 
     def parsed(soup: BeautifulSoup, *, sigma=sigma):
-        regex = re.compile(r"\!|\?|\.")
         # TODO: Fix the problem caused by parsing "Prof." "Dr." and so on.
+        regex = re.compile(r"\!|\?|\.")
+
         paragraphs = soup.find_all("p", limit=sigma)
         for p in paragraphs:
             sentences: List[str] = regex.split(p.text)
@@ -105,6 +106,7 @@ def proceed_problem1(
     # Create an empty array :math:`\mathcal{X}`.
     sentence_list: List[Sentence] = list()
 
+    # Repeat until all nodes are traversed.
     for node in nodes:
         url, soup = node["url"], node["content"]
 
@@ -115,7 +117,6 @@ def proceed_problem1(
             "url": url,
             "content": list(parsed(soup, sigma=sigma)),
         })
-    # Repeat until all nodes are traversed.
 
     return sentence_list
 
@@ -142,8 +143,7 @@ def proceed_problem2(
         List[bool] -- Vector :math:`v` as :math:`{0, 1}
     """
     # Create an vector :math:`v` with 0's.
-    vec: List[bool] = [False for i in range(
-        len(english_dictionary))]
+    vec: List[bool] = [False for i in range(len(english_dictionary))]
 
     # For each :math:`s` in :math:`S`, match :math:`s`
     # with a tuple :math:`w` in :math:`D` or ``null``.
