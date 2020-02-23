@@ -142,11 +142,11 @@ def proceed_problem2(
         List[bool] -- Vector :math:`v` as :math:`{0, 1}
     """
     # Create an vector :math:`v` with 0's.
-    vec: List[bool] = [False for i in range(len(english_dictionary))]
-
-    # For each :math:`s` in :math:`S`, match :math:`s`
-    # with a tuple :math:`w` in :math:`D` or ``null``.
-    vec = [sentence == w for w in english_dictionary]
+    vec: List[bool] = [
+        # For each :math:`s` in :math:`S`, match :math:`s`
+        # with a tuple :math:`w` in :math:`D` or ``null``.
+        sentence == w for w in english_dictionary
+        ]
 
     # Match the index of tuple :math:`w` in :math:`D`,
     # replace :math:`v[i]` by 1.
