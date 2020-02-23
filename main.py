@@ -11,7 +11,6 @@ from bs4 import BeautifulSoup
 uint = typing.NewType("unsigned_int", int)
 URL = typing.NewType("URL", str)
 Sentence = typing.NewType("Sentence", str)
-Table = typing.Dict
 
 
 class NewsCategory(enum.Enum):
@@ -188,18 +187,21 @@ def proceed_problem3(
 
 
 def proceed_problem4(
-        C: Table[NewsCategory, int],
+        C: List[NewsCategory],
 ) -> str:
     r"""Get the maximum occurrence count of news categories
 
     Arguments:
-        C {Table[NewsCategory, int]} -- Set of every category :math:`c \in C`
+        C {List[NewsCategory]} -- List of every category :math:`c \in C`
 
     Returns:
         str -- Category :math:`c` as string
     """
     # Count unique :math:`c` and return an array.
+    occurrence_counts = dict((c, 0) for c in NewsCategory)
+    for c in C:
+        occurrence_counts[c] += 1
 
     # Select the maximum of the array.
-    c: NewsCategory = NewsCategory.Default
+    c: NewsCategory = max(occurrence_counts, key=occurrence_counts.get)
     return c.name
