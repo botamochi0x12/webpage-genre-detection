@@ -145,7 +145,7 @@ def proceed_problem2(
     vec: List[bool] = [
         # For each :math:`s` in :math:`S`, match :math:`s`
         # with a tuple :math:`w` in :math:`D` or ``null``.
-        sentence == w for w in english_dictionary
+        w in sentence for w in english_dictionary
         ]
 
     # Match the index of tuple :math:`w` in :math:`D`,
