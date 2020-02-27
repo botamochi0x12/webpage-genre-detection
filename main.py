@@ -19,16 +19,33 @@ try:
     with open("categories.csv") as f:
         NewsCategory = enum.Enum(
             "NewsCategory", [row[0] for row in csv.reader(f) if row[0]])
-except OSError:
-    pass
+except OSError as ex:
+    print(ex, file=sys.stderr)
 
 # %%
 DELTA = 3
 GAMMA = 3
-SIGMA = 3
+SIGMA = 1
 
 
-def construct_tree_from(url, *, delta_, gamma=GAMMA):
+def construct_tree_from(url, *, delta_, gamma=GAMMA, root_tree={"data": None, "nodes": None}):
+    def dig(*, delta_, gamma=GAMMA, root_tree=root_tree):
+        # Create new children not exceeding :math:`γ`.
+        # From HTML script, get new URLs
+        for anchor in soup.find_all("a", limit=gamma):
+            # TODO: Fix below since each `tree` is local
+            if is_duplicated(anchor["href"], tree=root_tree):
+                continue
+            try:
+                # Apply until tree reaches depth :math:`δ`.
+                yield construct_tree_from(
+                        url=anchor["href"],
+                        delta_=delta_-1, gamma=gamma, root_tree=root_tree)
+            except requests.exceptions.MissingSchema as ex:
+                print(ex, file=sys.stderr)
+            except requests.HTTPError as ex:
+                print(ex, file=sys.stderr)
+
     if delta_ < 0:
         raise ValueError(
             f"Max. depth must be positive. (delta_ as depth < {delta_})")
@@ -46,23 +63,7 @@ def construct_tree_from(url, *, delta_, gamma=GAMMA):
     if delta_ == 0:
         return tree
 
-    nodes = []
-    # Create new children not exceeding :math:`γ`.
-    # From HTML script, get new URLs
-    for anchor in soup.find_all("a", limit=gamma):
-        if is_duplicated(anchor["href"], tree=tree):
-            continue
-        try:
-            # Apply until tree reaches depth :math:`δ`.
-            nodes.append(construct_tree_from(
-                url=anchor["href"],
-                delta_=delta_-1, gamma=gamma))
-        except requests.exceptions.MissingSchema as ex:
-            print(ex, file=sys.stderr)
-        except requests.HTTPError as ex:
-            print(ex, file=sys.stderr)
-
-    tree["nodes"] = nodes
+    tree["nodes"] = dig(delta_=delta_, root_tree=root_tree)
     return tree
 
 
@@ -113,6 +114,22 @@ def parsed(soup: BeautifulSoup, *, sigma=SIGMA):
                 yield s.strip()
 
 
+def flatten(nodes, *, sigma=SIGMA, on_demand=False):
+    # if not on_demand:
+    #     parsed = lambda *args, **kwargs: list(parsed(*args, **kwargs))
+
+    # Repeat until all nodes are traversed.
+    for node in nodes:
+        url, soup = node["url"], node["content"]
+
+        # Now, traverse each node :math:`n` in :math:`T`
+        # and derive maximum :math:`σ` sentences.
+        # Add each sentence :math:`s` into :math:`\mathcal{X}`.
+        yield {
+            "url": url,
+            "content": list(parsed(soup, sigma=sigma)),
+        }
+
 def proceed_problem1(
         url: URL,
         delta_: uint = DELTA,
@@ -134,23 +151,13 @@ def proceed_problem1(
         List[Sentence] -- Array of all derived sentences
     """
     # Create an empty tree :math:`T`.
-    tree = construct_tree_from(url=url, delta_=delta_, gamma=gamma)
+    tree = construct_tree_from(
+        url=url,
+        delta_=delta_, gamma=gamma)
     nodes = traversed(tree)
 
     # Create an empty array :math:`\mathcal{X}`.
-    sentence_list: List[Sentence] = list()
-
-    # Repeat until all nodes are traversed.
-    for node in nodes:
-        url, soup = node["url"], node["content"]
-
-        # Now, traverse each node :math:`n` in :math:`T`
-        # and derive maximum :math:`σ` sentences.
-        # Add each sentence :math:`s` into :math:`\mathcal{X}`.
-        sentence_list.append({
-            "url": url,
-            "content": list(parsed(soup, sigma=sigma)),
-        })
+    sentence_list: List[Sentence] = list(flatten(nodes, sigma=sigma))
 
     return sentence_list
 
