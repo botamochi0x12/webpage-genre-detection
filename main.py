@@ -46,7 +46,7 @@ def proceed_problem1(
     def construct_tree_from(url, *, delta_, gamma=gamma):
         if delta_ < 0:
             raise ValueError(
-                f"Max. depth delta_ must be positive. (delta_ = {delta_})")
+                f"Max. depth must be positive. (delta_ as depth < {delta_})")
 
         # Create an empty tree :math:`T`.
         tree = {"data": None, "nodes": None}
