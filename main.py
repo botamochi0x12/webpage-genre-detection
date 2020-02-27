@@ -80,28 +80,47 @@ def scoop(
             print(ex, file=sys.stderr)
 
 
-def is_duplicated(url, *, tree, allowing_query=False):
-    if not tree:
-        return False
+def is_duplicated(url, *, tree=None, url_list=None, allowing_query=False):
+    def compare_urls(url, url_, *, allowing_query=False):
+        # NOTE: Optional URL components
+        # (such as query & fragment) affect what page is shown.
+        if not allowing_query:
+            url_ = splitquery(url_)[0]
+        return url == url_
 
-    if tree["data"] is None:
-        return False
+    def with_tree(tree):
+        if not tree:
+            return False
 
-    # NOTE: Optional URL components
-    # (such as query & fragment) affect what page is shown.
-    url_ = tree["data"]["url"]
-    if not allowing_query:
-        url_ = splitquery(url_)[0]
-    if url == url_:
-        return True
+        if tree["data"] is None:
+            return False
 
-    nodes = tree["nodes"]
-    if not nodes:
-        return False
-    for subtree in nodes:
-        if is_duplicated(url, tree=subtree):
+        url_ = tree["data"]["url"]
+        if compare_urls(url, url_):
             return True
-    return False
+
+        nodes = tree["nodes"]
+        if not nodes:
+            return False
+        for subtree in nodes:
+            if is_duplicated(url, tree=subtree):
+                return True
+        return False
+
+    def with_url_list(url_list):
+        if not url_list:
+            return False
+
+        for url_ in url_list:
+            if compare_urls(url, url_):
+                return True
+
+    if tree:
+        return with_tree(tree)
+    elif url_list:
+        return with_url_list(url_list)
+    else:
+        return False
 
 
 def traversed(tree: dict) -> list:
