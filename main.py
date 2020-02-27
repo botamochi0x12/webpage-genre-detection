@@ -5,6 +5,7 @@ import re
 import sys
 import typing
 from typing import List, Set
+from urllib.parse import splitquery
 
 import requests
 from bs4 import BeautifulSoup
@@ -104,7 +105,7 @@ def proceed_problem1(
                 if s.strip():
                     yield s.strip()
 
-    def is_duplicated(url, *, tree):
+    def is_duplicated(url, *, tree, using_query=False):
         if not tree:
             return False
 
@@ -112,8 +113,11 @@ def proceed_problem1(
             return False
 
         # NOTE: Optional URL components
-        # (such as query & fragment) affect locating.
-        if url == tree["data"]["url"]:
+        # (such as query & fragment) affect what page is shown.
+        url_ = tree["data"]["url"]
+        if not using_query:
+            url_ = splitquery(url_)[0]
+        if url == url_:
             return True
 
         nodes = tree["nodes"]
