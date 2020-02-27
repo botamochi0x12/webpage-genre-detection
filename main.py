@@ -27,6 +27,91 @@ GAMMA = 3
 SIGMA = 3
 
 
+def construct_tree_from(url, *, delta_, gamma=GAMMA):
+    if delta_ < 0:
+        raise ValueError(
+            f"Max. depth must be positive. (delta_ as depth < {delta_})")
+
+    # Create an empty tree :math:`T`.
+    tree = {"data": None, "nodes": None}
+
+    # Starting from :math:`u`, get the web page HTML script.
+    # Insert :math:`u` into the tree as root.
+    response = requests.get(url)
+    response.raise_for_status()
+    soup = BeautifulSoup(response.content, "lxml")
+    tree["data"] = {"url": url, "content": soup}
+
+    if delta_ == 0:
+        return tree
+
+    nodes = []
+    # Create new children not exceeding :math:`γ`.
+    # From HTML script, get new URLs
+    for anchor in soup.find_all("a", limit=gamma):
+        if is_duplicated(anchor["href"], tree=tree):
+            continue
+        try:
+            # Apply until tree reaches depth :math:`δ`.
+            nodes.append(construct_tree_from(
+                url=anchor["href"],
+                delta_=delta_-1, gamma=gamma))
+        except requests.exceptions.MissingSchema as ex:
+            print(ex, file=sys.stderr)
+        except requests.HTTPError as ex:
+            print(ex, file=sys.stderr)
+
+    tree["nodes"] = nodes
+    return tree
+
+
+def is_duplicated(url, *, tree, allowing_query=False):
+    if not tree:
+        return False
+
+    if tree["data"] is None:
+        return False
+
+    # NOTE: Optional URL components
+    # (such as query & fragment) affect what page is shown.
+    url_ = tree["data"]["url"]
+    if not allowing_query:
+        url_ = splitquery(url_)[0]
+    if url == url_:
+        return True
+
+    nodes = tree["nodes"]
+    if not nodes:
+        return False
+    for subtree in nodes:
+        if is_duplicated(url, tree=subtree):
+            return True
+    return False
+
+
+def traversed(tree: dict) -> list:
+    if not tree:
+        raise ValueError("A tree node must have each value.")
+    data, subtrees = tree["data"], tree["nodes"]
+    if data:
+        yield data
+    if subtrees:
+        for subtree in subtrees:
+            yield from traversed(subtree)
+
+
+def parsed(soup: BeautifulSoup, *, sigma=SIGMA):
+    # TODO: Fix the problem caused by parsing "Prof." "Dr." and so on.
+    regex = re.compile(r"\!|\?|\.")
+
+    paragraphs = soup.find_all("p", limit=sigma)
+    for p in paragraphs:
+        sentences: List[str] = regex.split(p.text)
+        for s in sentences:
+            if s.strip():
+                yield s.strip()
+
+
 def proceed_problem1(
         url: URL,
         delta_: uint = DELTA,
@@ -47,87 +132,6 @@ def proceed_problem1(
     Returns:
         List[Sentence] -- Array of all derived sentences
     """
-    def construct_tree_from(url, *, delta_, gamma=gamma):
-        if delta_ < 0:
-            raise ValueError(
-                f"Max. depth must be positive. (delta_ as depth < {delta_})")
-
-        # Create an empty tree :math:`T`.
-        tree = {"data": None, "nodes": None}
-
-        # Starting from :math:`u`, get the web page HTML script.
-        # Insert :math:`u` into the tree as root.
-        response = requests.get(url)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.content, "lxml")
-        tree["data"] = {"url": url, "content": soup}
-
-        if delta_ == 0:
-            return tree
-
-        nodes = []
-        # Create new children not exceeding :math:`γ`.
-        # From HTML script, get new URLs
-        for anchor in soup.find_all("a", limit=gamma):
-            if is_duplicated(anchor["href"], tree=tree):
-                continue
-            try:
-                # Apply until tree reaches depth :math:`δ`.
-                nodes.append(construct_tree_from(
-                    url=anchor["href"],
-                    delta_=delta_-1, gamma=gamma))
-            except requests.exceptions.MissingSchema as ex:
-                print(ex, file=sys.stderr)
-            except requests.HTTPError as ex:
-                print(ex, file=sys.stderr)
-
-        tree["nodes"] = nodes
-        return tree
-
-    def traversed(tree: dict) -> list:
-        if not tree:
-            raise ValueError("A tree node must have each value.")
-        data, subtrees = tree["data"], tree["nodes"]
-        if data:
-            yield data
-        if subtrees:
-            for subtree in subtrees:
-                yield from traversed(subtree)
-
-    def parsed(soup: BeautifulSoup, *, sigma=sigma):
-        # TODO: Fix the problem caused by parsing "Prof." "Dr." and so on.
-        regex = re.compile(r"\!|\?|\.")
-
-        paragraphs = soup.find_all("p", limit=sigma)
-        for p in paragraphs:
-            sentences: List[str] = regex.split(p.text)
-            for s in sentences:
-                if s.strip():
-                    yield s.strip()
-
-    def is_duplicated(url, *, tree, using_query=False):
-        if not tree:
-            return False
-
-        if tree["data"] is None:
-            return False
-
-        # NOTE: Optional URL components
-        # (such as query & fragment) affect what page is shown.
-        url_ = tree["data"]["url"]
-        if not using_query:
-            url_ = splitquery(url_)[0]
-        if url == url_:
-            return True
-
-        nodes = tree["nodes"]
-        if not nodes:
-            return False
-        for subtree in nodes:
-            if is_duplicated(url, tree=subtree):
-                return True
-        return False
-
     # Create an empty tree :math:`T`.
     tree = construct_tree_from(url=url, delta_=delta_, gamma=gamma)
     nodes = traversed(tree)
