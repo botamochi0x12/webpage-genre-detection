@@ -29,23 +29,6 @@ SIGMA = 1
 
 
 def construct_tree_from(url, *, delta_, gamma=GAMMA, root_tree={"data": None, "nodes": None}):
-    def dig(*, delta_, gamma=GAMMA, root_tree=root_tree):
-        # Create new children not exceeding :math:`γ`.
-        # From HTML script, get new URLs
-        for anchor in soup.find_all("a", limit=gamma):
-            # TODO: Fix below since each `tree` is local
-            if is_duplicated(anchor["href"], tree=root_tree):
-                continue
-            try:
-                # Apply until tree reaches depth :math:`δ`.
-                yield construct_tree_from(
-                        url=anchor["href"],
-                        delta_=delta_-1, gamma=gamma, root_tree=root_tree)
-            except requests.exceptions.MissingSchema as ex:
-                print(ex, file=sys.stderr)
-            except requests.HTTPError as ex:
-                print(ex, file=sys.stderr)
-
     if delta_ < 0:
         raise ValueError(
             f"Max. depth must be positive. (delta_ as depth < {delta_})")
@@ -63,8 +46,26 @@ def construct_tree_from(url, *, delta_, gamma=GAMMA, root_tree={"data": None, "n
     if delta_ == 0:
         return tree
 
-    tree["nodes"] = dig(delta_=delta_, root_tree=root_tree)
+    tree["nodes"] = scoop(soup, delta_=delta_, root_tree=root_tree)
     return tree
+
+
+def scoop(soup: BeautifulSoup, *, delta_, gamma=GAMMA, root_tree=root_tree):
+    # Create new children not exceeding :math:`γ`.
+    # From HTML script, get new URLs
+    for anchor in soup.find_all("a", limit=gamma):
+        # TODO: Fix below since each `tree` is local
+        if is_duplicated(anchor["href"], tree=root_tree):
+            continue
+        try:
+            # Apply until tree reaches depth :math:`δ`.
+            yield construct_tree_from(
+                    url=anchor["href"],
+                    delta_=delta_-1, gamma=gamma, root_tree=root_tree)
+        except requests.exceptions.MissingSchema as ex:
+            print(ex, file=sys.stderr)
+        except requests.HTTPError as ex:
+            print(ex, file=sys.stderr)
 
 
 def is_duplicated(url, *, tree, allowing_query=False):
