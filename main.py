@@ -66,12 +66,15 @@ def proceed_problem1(
 
         nodes = []
         # Create new children not exceeding :math:`γ`.
+        # From HTML script, get new URLs
         for anchor in soup.find_all("a", limit=gamma):
+            if is_duplicated(anchor["href"], tree=tree):
+                continue
             try:
-                # From HTML script, get new URLs
                 # Apply until tree reaches depth :math:`δ`.
                 nodes.append(construct_tree_from(
-                    url=anchor["href"], delta_=delta_-1, gamma=gamma))
+                    url=anchor["href"],
+                    delta_=delta_-1, gamma=gamma))
             except requests.exceptions.MissingSchema as ex:
                 print(ex, file=sys.stderr)
             except requests.HTTPError as ex:
@@ -100,6 +103,26 @@ def proceed_problem1(
             for s in sentences:
                 if s.strip():
                     yield s.strip()
+
+    def is_duplicated(url, *, tree):
+        if not tree:
+            return False
+
+        if tree["data"] is None:
+            return False
+
+        # NOTE: Optional URL components
+        # (such as query & fragment) affect locating.
+        if url == tree["data"]["url"]:
+            return True
+
+        nodes = tree["nodes"]
+        if not nodes:
+            return False
+        for subtree in nodes:
+            if is_duplicated(url, tree=subtree):
+                return True
+        return False
 
     # Create an empty tree :math:`T`.
     tree = construct_tree_from(url=url, delta_=delta_, gamma=gamma)
