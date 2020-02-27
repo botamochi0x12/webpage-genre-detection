@@ -1,4 +1,5 @@
 # %%
+import csv
 import enum
 import re
 import sys
@@ -12,10 +13,12 @@ uint = typing.NewType("unsigned_int", int)
 URL = typing.NewType("URL", str)
 Sentence = typing.NewType("Sentence", str)
 
-
-class NewsCategory(enum.Enum):
-    Default = enum.auto()
-
+try:
+    with open("categories.csv") as f:
+        NewsCategory = enum.Enum(
+            "NewsCategory", [row[0] for row in csv.reader(f) if row[0]])
+except:
+    NewsCategory = enum.Enum("NewsCategory", "Default")
 
 # %%
 DELTA = 3
@@ -180,7 +183,7 @@ def proceed_problem3(
     svm: typing.Any
     for v in V:
         break
-    c: NewsCategory = NewsCategory.Default
+    c: NewsCategory = getattr(NewsCategory, C[0])
     return c.value
 
 # %%
