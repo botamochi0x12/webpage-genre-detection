@@ -14,12 +14,13 @@ uint = typing.NewType("unsigned_int", int)
 URL = typing.NewType("URL", str)
 Sentence = typing.NewType("Sentence", str)
 
+NewsCategory = enum.Enum("NewsCategory", "Default")
 try:
     with open("categories.csv") as f:
         NewsCategory = enum.Enum(
             "NewsCategory", [row[0] for row in csv.reader(f) if row[0]])
-except:
-    NewsCategory = enum.Enum("NewsCategory", "Default")
+except OSError:
+    pass
 
 # %%
 DELTA = 3
