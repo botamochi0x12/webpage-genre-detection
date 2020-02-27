@@ -28,7 +28,13 @@ GAMMA = 3
 SIGMA = 1
 
 
-def construct_tree_from(url, *, delta_, gamma=GAMMA, root_tree={"data": None, "nodes": None}):
+def construct_tree_from(
+    url,
+    *,
+    delta_,
+    gamma=GAMMA,
+    root_tree={"data": None, "nodes": None}
+):
     if delta_ < 0:
         raise ValueError(
             f"Max. depth must be positive. (delta_ as depth < {delta_})")
@@ -50,7 +56,13 @@ def construct_tree_from(url, *, delta_, gamma=GAMMA, root_tree={"data": None, "n
     return tree
 
 
-def scoop(soup: BeautifulSoup, *, delta_, gamma=GAMMA, root_tree=root_tree):
+def scoop(
+    soup: BeautifulSoup,
+    *,
+    delta_,
+    gamma=GAMMA,
+    root_tree={"data": None, "nodes": None}
+):
     # Create new children not exceeding :math:`γ`.
     # From HTML script, get new URLs
     for anchor in soup.find_all("a", limit=gamma):
@@ -116,8 +128,9 @@ def parsed(soup: BeautifulSoup, *, sigma=SIGMA):
 
 
 def flatten(nodes, *, sigma=SIGMA, on_demand=False):
-    # if not on_demand:
-    #     parsed = lambda *args, **kwargs: list(parsed(*args, **kwargs))
+    if not on_demand:
+        # TODO: Wrap a return value of `parsed`
+        pass
 
     # Repeat until all nodes are traversed.
     for node in nodes:
@@ -130,6 +143,7 @@ def flatten(nodes, *, sigma=SIGMA, on_demand=False):
             "url": url,
             "content": list(parsed(soup, sigma=sigma)),
         }
+
 
 def proceed_problem1(
         url: URL,
