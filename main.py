@@ -23,9 +23,15 @@ except OSError as ex:
     print(ex, file=sys.stderr)
 
 # %%
-DELTA = 3
-GAMMA = 3
+DELTA = 2
+GAMMA = 2
 SIGMA = 1
+
+# NOTE:
+# * List instances are mutable
+# * Once `URL_LIST` is changed, it does never auto-reset.
+#     So, please assign it an empty list manually.
+URL_LIST = []
 
 
 def construct_tree_from(
@@ -33,12 +39,12 @@ def construct_tree_from(
     *,
     delta_,
     gamma=GAMMA,
-    root_tree={"data": None, "nodes": None}
 ):
     if delta_ < 0:
         raise ValueError(
             f"Max. depth must be positive. (delta_ as depth < {delta_})")
 
+    URL_LIST.append(url)
     # Create an empty tree :math:`T`.
     tree = {"data": None, "nodes": None}
 
@@ -52,7 +58,7 @@ def construct_tree_from(
     if delta_ == 0:
         return tree
 
-    tree["nodes"] = scoop(soup, delta_=delta_, root_tree=root_tree)
+    tree["nodes"] = scoop(soup, delta_=delta_)
     return tree
 
 
@@ -61,26 +67,27 @@ def scoop(
     *,
     delta_,
     gamma=GAMMA,
-    root_tree={"data": None, "nodes": None}
 ):
     # Create new children not exceeding :math:`γ`.
     # From HTML script, get new URLs
     for anchor in soup.find_all("a", limit=gamma):
         # TODO: Fix below since each `tree` is local
-        if is_duplicated(anchor["href"], tree=root_tree):
+        print(anchor["href"])
+        if is_duplicated(anchor["href"]):
+            print("pass")
             continue
         try:
             # Apply until tree reaches depth :math:`δ`.
             yield construct_tree_from(
                     url=anchor["href"],
-                    delta_=delta_-1, gamma=gamma, root_tree=root_tree)
+                    delta_=delta_-1, gamma=gamma)
         except requests.exceptions.MissingSchema as ex:
             print(ex, file=sys.stderr)
         except requests.HTTPError as ex:
             print(ex, file=sys.stderr)
 
 
-def is_duplicated(url, *, tree=None, url_list=None, allowing_query=False):
+def is_duplicated(url, *, tree=None, url_list=URL_LIST, allowing_query=False):
     def compare_urls(url, url_, *, allowing_query=False):
         # NOTE: Optional URL components
         # (such as query & fragment) affect what page is shown.
@@ -114,6 +121,8 @@ def is_duplicated(url, *, tree=None, url_list=None, allowing_query=False):
         for url_ in url_list:
             if compare_urls(url, url_):
                 return True
+
+        return False
 
     if tree:
         return with_tree(tree)
