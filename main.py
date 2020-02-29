@@ -4,6 +4,8 @@ import enum
 import re
 import sys
 import typing
+import numpy as np
+import editdistance
 from typing import List, Set
 from urllib.parse import splitquery
 
@@ -24,14 +26,14 @@ except OSError as ex:
 
 # %%
 DELTA = 2
-GAMMA = 2
-SIGMA = 1
-
+GAMMA = 4
+SIGMA = 100
+URL_LIST = []
 # NOTE:
 # * List instances are mutable
 # * Once `URL_LIST` is changed, it does never auto-reset.
 #     So, please assign it an empty list manually.
-URL_LIST = []
+
 
 
 def construct_tree_from(
@@ -206,12 +208,50 @@ def proceed_problem1(
 
 
 # %%
-ENGLISH_WORD_WITH_PARAMATER_DICTIONARY = None
 
+def load_dictionary():
+    full_lines = []
+    # Load the structure.
+    files = ["WordNet/index.adj", "WordNet/index.adv", "WordNet/index.noun", "WordNet/index.verb"]
+    for f in files:
+        fi = open(f, "r")
+        for x in fi:
+            full_lines.append(x)
+        fi.close()
+    words = [w.split(" ")[0] for w in full_lines]
+    tags = [t.split(" ")[1] for t in full_lines]
+    words = [w.replace("_", " ") for w in words]
+    structure = np.array([words, tags]).T.tolist()
+    
+    # Load exceptional structures for verbs.
+    verbs = []
+    fi = open("WordNet/exc", "r")
+    for x in fi:
+        verbs.append(x)
+    verbs = [w.split(" ") for w in verbs]
+    for i in range(len(structure)):
+        for j in range(len(verbs)):
+            if(structure[i][0] == verbs[j][0] and structure[i][1] == 'v'):
+                if(len(structure[i]) < 3):
+                    structure[i].append('True')
+                    structure[i].append(verbs[j][1])
+                    structure[i].append(verbs[j][2])
+                else:
+                    structure[i][2] = 'True'
+                    structure[i][3] = verbs[j][1]
+                    structure[i][4] = verbs[j][2]
+            else:
+                if(len(structure[i]) < 3):
+                    structure[i].append('False')
+                    structure[i].append("")
+                    structure[i].append("")
+    return structure
+        
+ENGLISH_WORD_WITH_PARAMETER_DICTIONARY = load_dictionary()
 
 def proceed_problem2(
         sentence: Sentence,
-        english_dictionary=ENGLISH_WORD_WITH_PARAMATER_DICTIONARY,
+        english_dictionary=ENGLISH_WORD_WITH_PARAMETER_DICTIONARY,
 ) -> List[bool]:
     r"""Creation of a parse vector generated from the input.
 
@@ -226,12 +266,23 @@ def proceed_problem2(
     Returns:
         List[bool] -- Vector :math:`v` as :math:`{0, 1}
     """
+    
+    def edit_distance(w, english_dictionary):
+        for e in english_dictionary:
+            d = editdistance.eval(w, e[0])
+            print(d)
+        return w
+    
     # Create an vector :math:`v` with 0's.
-    vec: List[bool] = [
-        # For each :math:`s` in :math:`S`, match :math:`s`
-        # with a tuple :math:`w` in :math:`D` or ``null``.
-        w in sentence for w in english_dictionary
-        ]
+
+    vec = [False for i in range(len(english_dictionary))]
+    for i in range(len(sentence['content'])):
+        partition = sentence['content'][i].split(' ')
+        for j in range(len(partition)):
+            for k in range(len(english_dictionary)):
+                if(vec[k] == False):
+                    if(partition[j] == english_dictionary[k][0]):
+                        vec[k] = True
 
     # Match the index of tuple :math:`w` in :math:`D`,
     # replace :math:`v[i]` by 1.
@@ -265,7 +316,7 @@ def proceed_problem3(
     svm: typing.Any
     for v in V:
         break
-    c: NewsCategory = getattr(NewsCategory, C[0])
+    c: NewsCategory = NewsCategory.Default
     return c.value
 
 # %%
@@ -290,3 +341,12 @@ def proceed_problem4(
     # Select the maximum of the array.
     c: NewsCategory = max(occurrence_counts, key=occurrence_counts.get)
     return c.name
+
+# %%
+
+
+vecs = []
+url = input("Give a URL to me: ")
+sentences = proceed_problem1(url)
+for sentence in sentences:
+    vecs.append(proceed_problem2(sentence))
