@@ -4,11 +4,11 @@ import enum
 import re
 import sys
 import typing
-import numpy as np
-import editdistance
 from typing import List, Set
 from urllib.parse import splitquery
 
+import editdistance
+import numpy as np
 import requests
 from bs4 import BeautifulSoup
 
@@ -28,12 +28,12 @@ except OSError as ex:
 DELTA = 2
 GAMMA = 4
 SIGMA = 100
-URL_LIST = []
+
 # NOTE:
 # * List instances are mutable
 # * Once `URL_LIST` is changed, it does never auto-reset.
 #     So, please assign it an empty list manually.
-
+URL_LIST = []
 
 
 def construct_tree_from(
@@ -157,7 +157,7 @@ def parsed(soup: BeautifulSoup, *, sigma=SIGMA):
                 yield s.strip()
 
 
-def flatten(nodes, *, sigma=SIGMA, on_demand=False):
+def flatten(nodes, *, sigma=SIGMA, on_demand=False) -> List[Sentence]:
     if not on_demand:
         # TODO: Wrap a return value of `parsed`
         pass
@@ -169,10 +169,12 @@ def flatten(nodes, *, sigma=SIGMA, on_demand=False):
         # Now, traverse each node :math:`n` in :math:`T`
         # and derive maximum :math:`σ` sentences.
         # Add each sentence :math:`s` into :math:`\mathcal{X}`.
-        yield {
+        sentences = list(parsed(soup, sigma=sigma))
+        print({
             "url": url,
-            "content": list(parsed(soup, sigma=sigma)),
-        }
+            "content": sentences,
+        })
+        yield sentences
 
 
 def proceed_problem1(
@@ -202,52 +204,62 @@ def proceed_problem1(
     nodes = traversed(tree)
 
     # Create an empty array :math:`\mathcal{X}`.
-    sentence_list: List[Sentence] = list(flatten(nodes, sigma=sigma))
-
-    return sentence_list
+    sentences: List[Sentence] = list(
+        itm for lst in flatten(nodes, sigma=sigma) for itm in lst)
+    return sentences
 
 
 # %%
+DICTIONARY_PATHS = [
+    "WordNet/index.adj",
+    "WordNet/index.adv",
+    "WordNet/index.noun",
+    "WordNet/index.verb",
+    ]
+EXCEPTIONAL_DICTIONARY_PATH = "WordNet/exc"
+
 
 def load_dictionary():
-    full_lines = []
     # Load the structure.
-    files = ["WordNet/index.adj", "WordNet/index.adv", "WordNet/index.noun", "WordNet/index.verb"]
+    full_lines = []
+    files = DICTIONARY_PATHS
     for f in files:
-        fi = open(f, "r")
-        for x in fi:
-            full_lines.append(x)
-        fi.close()
-    words = [w.split(" ")[0] for w in full_lines]
-    tags = [t.split(" ")[1] for t in full_lines]
-    words = [w.replace("_", " ") for w in words]
+        with open(f, "r") as fi:
+            for x in fi:
+                full_lines.append(x)
+    words = [w.split()[0].replace("_", " ") for w in full_lines]
+    tags = [t.split()[1] for t in full_lines]
     structure = np.array([words, tags]).T.tolist()
-    
+
     # Load exceptional structures for verbs.
     verbs = []
-    fi = open("WordNet/exc", "r")
-    for x in fi:
-        verbs.append(x)
-    verbs = [w.split(" ") for w in verbs]
-    for i in range(len(structure)):
-        for j in range(len(verbs)):
-            if(structure[i][0] == verbs[j][0] and structure[i][1] == 'v'):
-                if(len(structure[i]) < 3):
-                    structure[i].append('True')
-                    structure[i].append(verbs[j][1])
-                    structure[i].append(verbs[j][2])
+    with open(EXCEPTIONAL_DICTIONARY_PATH, "r") as fi:
+        for x in fi:
+            verbs.append(x)
+    verbs = [w.split() for w in verbs]
+    for struct in structure:
+        if struct[1] != 'v':
+            continue
+        for verb in verbs:
+            if struct[0] == verb[0]:
+                if len(struct) < 3:
+                    struct.append('True')
+                    struct.append(verb[1])
+                    struct.append(verb[2])
                 else:
-                    structure[i][2] = 'True'
-                    structure[i][3] = verbs[j][1]
-                    structure[i][4] = verbs[j][2]
+                    struct[2] = 'True'
+                    struct[3] = verb[1]
+                    struct[4] = verb[2]
             else:
-                if(len(structure[i]) < 3):
-                    structure[i].append('False')
-                    structure[i].append("")
-                    structure[i].append("")
+                if len(struct) < 3:
+                    struct.append('False')
+                    struct.append("")
+                    struct.append("")
     return structure
-        
+
+
 ENGLISH_WORD_WITH_PARAMETER_DICTIONARY = load_dictionary()
+
 
 def proceed_problem2(
         sentence: Sentence,
@@ -266,23 +278,23 @@ def proceed_problem2(
     Returns:
         List[bool] -- Vector :math:`v` as :math:`{0, 1}
     """
-    
+
     def edit_distance(w, english_dictionary):
         for e in english_dictionary:
             d = editdistance.eval(w, e[0])
             print(d)
         return w
-    
+
     # Create an vector :math:`v` with 0's.
 
     vec = [False for i in range(len(english_dictionary))]
-    for i in range(len(sentence['content'])):
-        partition = sentence['content'][i].split(' ')
-        for j in range(len(partition)):
-            for k in range(len(english_dictionary)):
-                if(vec[k] == False):
-                    if(partition[j] == english_dictionary[k][0]):
-                        vec[k] = True
+
+    words = sentence.split()
+    for word in words:
+        for k, word_definition in enumerate(english_dictionary):
+            if not vec[k]:
+                if word == word_definition[0]:
+                    vec[k] = True
 
     # Match the index of tuple :math:`w` in :math:`D`,
     # replace :math:`v[i]` by 1.
@@ -345,8 +357,9 @@ def proceed_problem4(
 # %%
 
 
-vecs = []
-url = input("Give a URL to me: ")
-sentences = proceed_problem1(url)
-for sentence in sentences:
-    vecs.append(proceed_problem2(sentence))
+vec_list = []
+url = input("Give a URL to me: ") or "https://google.com"
+urls_and_sentences = proceed_problem1(url)
+for sentence_with_url in urls_and_sentences:
+    sentence = sentence_with_url["content"]
+    vec_list.append(proceed_problem2(sentence))
