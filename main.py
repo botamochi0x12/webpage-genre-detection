@@ -26,7 +26,7 @@ except OSError as ex:
 
 # %%
 DELTA = 2
-GAMMA = 4
+GAMMA = 3
 SIGMA = 100
 
 # NOTE:
@@ -45,7 +45,8 @@ def construct_tree_from(
     if delta_ < 0:
         raise ValueError(
             f"Max. depth must be positive. (delta_ as depth < {delta_})")
-
+    if(url.startswith('/')):
+        url = URL_LIST[0] + url
     URL_LIST.append(url)
     # Create an empty tree :math:`T`.
     tree = {"data": None, "nodes": None}
@@ -70,11 +71,14 @@ def scoop(
     delta_,
     gamma=GAMMA,
 ):
+    gamma_ = gamma
     # Create new children not exceeding :math:`γ`.
     # From HTML script, get new URLs
-    for anchor in soup.find_all("a", limit=gamma):
+    for anchor in soup.find_all("a"):
         # TODO: Fix below since each `tree` is local
         print(anchor["href"])
+        if gamma_ == 0:
+            break
         if is_duplicated(anchor["href"]):
             print("pass")
             continue
@@ -83,7 +87,10 @@ def scoop(
             yield construct_tree_from(
                     url=anchor["href"],
                     delta_=delta_-1, gamma=gamma)
+            gamma_ = gamma_ - 1
         except requests.exceptions.MissingSchema as ex:
+            print(ex, file=sys.stderr)
+        except requests.exceptions.InvalidSchema as ex:
             print(ex, file=sys.stderr)
         except requests.HTTPError as ex:
             print(ex, file=sys.stderr)
@@ -217,25 +224,37 @@ DICTIONARY_PATHS = [
     "WordNet/index.verb",
     ]
 EXCEPTIONAL_DICTIONARY_PATH = "WordNet/exc"
+EDIT_DISTANCE_LIMIT = 12
 
+def edit_distance(w, english_dictionary):
+    d = np.inf
+    k_ = None
+    for k, e in english_dictionary.items():
+        d_ = editdistance.eval(w, e[0])
+        if(d_ < d and d_ < EDIT_DISTANCE_LIMIT):
+            d = d_
+            k_ = k
+    return english_dictionary[k_][0]
 
 def load_dictionary():
     # Load the structure.
-    full_lines: List[str] = []
+    dictionary = {}
+    full_lines = []
     files = DICTIONARY_PATHS
     for f in files:
         with open(f, "r") as fi:
             for x in fi:
                 full_lines.append(x)
-    words: List[str] = [w.split()[0].replace("_", " ") for w in full_lines]
-    tags: List[str] = [t.split()[1] for t in full_lines]
-    structure: List[List[str]] = np.array([words, tags]).T.tolist()
+    words = [w.split()[0].replace("_", " ") for w in full_lines]
+    tags = [t.split()[1] for t in full_lines]
+    structure = np.array([words, tags]).T.tolist()
 
     # Load exceptional structures for verbs.
-    verbs: List[List[str]] = []
+    verbs = []
     with open(EXCEPTIONAL_DICTIONARY_PATH, "r") as fi:
         for x in fi:
-            verbs.append(x.split())
+            verbs.append(x)
+    verbs = [w.split() for w in verbs]
     for struct in structure:
         if struct[1] != 'v':
             continue
@@ -254,7 +273,9 @@ def load_dictionary():
                     struct.append('False')
                     struct.append("")
                     struct.append("")
-    return structure
+    for s in range(len(structure)):
+        dictionary[s] = structure[s]
+    return dictionary
 
 
 ENGLISH_WORD_WITH_PARAMETER_DICTIONARY = load_dictionary()
@@ -278,21 +299,17 @@ def proceed_problem2(
         List[bool] -- Vector :math:`v` as :math:`{0, 1}
     """
 
-    def edit_distance(w, english_dictionary):
-        for e in english_dictionary:
-            d = editdistance.eval(w, e[0])
-            print(d)
-        return w
+
 
     # Create an vector :math:`v` with 0's.
 
     vec = [False for i in range(len(english_dictionary))]
-
+    sentence = re.sub(r'[\'\"\[\]\(\)!+?=.,*\!]', ' ', sentence)
     words = sentence.split()
     for word in words:
-        for k, word_definition in enumerate(english_dictionary):
+        for k, word_definition in english_dictionary.items():
             if not vec[k]:
-                if word == word_definition[0]:
+                if word == edit_distance(word_definition[0], english_dictionary):
                     vec[k] = True
 
     # Match the index of tuple :math:`w` in :math:`D`,
@@ -358,6 +375,6 @@ def proceed_problem4(
 
 vec_list = []
 url = input("Give a URL to me: ") or "https://google.com"
-sentences = proceed_problem1(url)
-for sentence in sentences:
+urls_and_sentences = proceed_problem1(url)
+for sentence in urls_and_sentences:
     vec_list.append(proceed_problem2(sentence))
