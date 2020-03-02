@@ -221,22 +221,21 @@ EXCEPTIONAL_DICTIONARY_PATH = "WordNet/exc"
 
 def load_dictionary():
     # Load the structure.
-    full_lines = []
+    full_lines: List[str] = []
     files = DICTIONARY_PATHS
     for f in files:
         with open(f, "r") as fi:
             for x in fi:
                 full_lines.append(x)
-    words = [w.split()[0].replace("_", " ") for w in full_lines]
-    tags = [t.split()[1] for t in full_lines]
-    structure = np.array([words, tags]).T.tolist()
+    words: List[str] = [w.split()[0].replace("_", " ") for w in full_lines]
+    tags: List[str] = [t.split()[1] for t in full_lines]
+    structure: List[List[str]] = np.array([words, tags]).T.tolist()
 
     # Load exceptional structures for verbs.
-    verbs = []
+    verbs: List[List[str]] = []
     with open(EXCEPTIONAL_DICTIONARY_PATH, "r") as fi:
         for x in fi:
-            verbs.append(x)
-    verbs = [w.split() for w in verbs]
+            verbs.append(x.split())
     for struct in structure:
         if struct[1] != 'v':
             continue
@@ -359,7 +358,6 @@ def proceed_problem4(
 
 vec_list = []
 url = input("Give a URL to me: ") or "https://google.com"
-urls_and_sentences = proceed_problem1(url)
-for sentence_with_url in urls_and_sentences:
-    sentence = sentence_with_url["content"]
+sentences = proceed_problem1(url)
+for sentence in sentences:
     vec_list.append(proceed_problem2(sentence))
