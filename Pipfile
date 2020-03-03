@@ -8,6 +8,8 @@ verify_ssl = true
 [packages]
 requests = "*"
 beautifulsoup4 = "*"
+editdistance = "*"
+numpy = "*"
 
 [requires]
 python_version = "3.8"
