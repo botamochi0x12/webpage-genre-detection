@@ -231,8 +231,6 @@ EDIT_DISTANCE_LIMIT = 12
 
 def load_dictionary():
     # Load the structure.
-    n = 0
-    dictionary = {}
     full_lines = []
     files = DICTIONARY_PATHS
     for f in files:
@@ -250,7 +248,8 @@ def load_dictionary():
         for x in fi:
             verbs.append(x)
     verbs = [w.split() for w in verbs]
-    for struct in structure:
+
+    for id_, struct in enumerate(structure):
         if struct[1] == 'v':
             for verb in verbs:
                 if struct[0] == verb[0]:
@@ -267,8 +266,9 @@ def load_dictionary():
                 struct.append('False')
                 struct.append("")
                 struct.append("")
-        struct.append(n)
-        n = n + 1
+        struct.append(id_)
+
+    dictionary = {}
     for s in range(len(structure)):
         dictionary[structure[s][0]] = structure[s]
     return dictionary
