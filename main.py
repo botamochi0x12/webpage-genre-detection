@@ -74,23 +74,19 @@ def scoop(
     delta_,
     gamma=GAMMA,
 ):
-    gamma_ = gamma
+    unique_anchors = (
+        a for a in soup.find_all("a") if not is_duplicated(a["href"]))
+
     # Create new children not exceeding :math:`γ`.
     # From HTML script, get new URLs
-    for anchor in soup.find_all("a"):
+    for anchor in unique_anchors:
         # TODO: Fix below since each `tree` is local
         print(anchor["href"])
-        if gamma_ == 0:
-            break
-        if is_duplicated(anchor["href"]):
-            print("pass")
-            continue
         try:
             # Apply until tree reaches depth :math:`δ`.
             yield construct_tree_from(
                     url=anchor["href"],
                     delta_=delta_-1, gamma=gamma)
-            gamma_ = gamma_ - 1
         except requests.exceptions.MissingSchema as ex:
             print(ex, file=sys.stderr)
         except requests.exceptions.InvalidSchema as ex:
@@ -378,5 +374,8 @@ def proceed_problem4(
 vec_list = []
 url = input("Give a URL to me: ") or "https://google.com"
 urls_and_sentences = proceed_problem1(url)
-for sentence in urls_and_sentences:
-    vec_list.append(proceed_problem2(sentence))
+# for sentence in urls_and_sentences:
+#     vec_list.append(proceed_problem2(sentence))
+
+
+# %%
