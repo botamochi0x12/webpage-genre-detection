@@ -1,20 +1,19 @@
 # %%
 import csv
 import enum
+import json
 import re
 import string
 import sys
 import typing
-
-import json
 from typing import List, Set
 from urllib.parse import splitquery
-import sklearn.svm as svm
 
+from bs4 import BeautifulSoup
 # import editdistance
 import numpy as np
 import requests
-from bs4 import BeautifulSoup
+import sklearn.svm
 
 uint = typing.NewType("unsigned_int", int)
 URL = typing.NewType("URL", str)
@@ -230,8 +229,6 @@ EXCEPTIONAL_DICTIONARY_PATH = "WordNet/exc"
 EDIT_DISTANCE_LIMIT = 12
 
 
-
-
 def load_dictionary():
     # Load the structure.
     n = 0
@@ -279,7 +276,11 @@ def load_dictionary():
 
 ENGLISH_WORD_WITH_PARAMETER_DICTIONARY = load_dictionary()
 
-def complete_edit_distance(w, english_dictionary=ENGLISH_WORD_WITH_PARAMETER_DICTIONARY):
+
+def complete_edit_distance(
+    w,
+    english_dictionary=ENGLISH_WORD_WITH_PARAMETER_DICTIONARY
+):
     d = np.inf
     wrd_ = None
     if w not in english_dictionary:
@@ -293,6 +294,7 @@ def complete_edit_distance(w, english_dictionary=ENGLISH_WORD_WITH_PARAMETER_DIC
         else:
             return wrd_
     return w
+
 
 def proceed_problem2(
         sentence: Sentence,
@@ -324,8 +326,9 @@ def proceed_problem2(
         if edited in english_dictionary:
             try:
                 print(english_dictionary[edited][5])
-            except:
-                print(english_dictionary[edited])
+            except KeyError as ex:
+                print(english_dictionary[edited], file=sys.stderr)
+                print(ex, file=sys.stderr)
             vec[english_dictionary[edited][5]] = True
 
     # Match the index of tuple :math:`w` in :math:`D`,
@@ -334,16 +337,23 @@ def proceed_problem2(
 
 
 # %%
-NEWS_CATEGORY_FILE = 'News_Category_Dataset_v2_new.json'
 KERNEL_FUNCTION = None
+PATH_TO_DATASET = 'News_Category_Dataset_v2_new.json'
 
-def train_svm(dataset=NEWS_CATEGORY_FILE, ratio_of_training_set=1):
+
+def load_dataset(path_to_dataset=PATH_TO_DATASET):
+    with open(path_to_dataset) as file:
+        category = json.load(file)
+    return category
+
+
+NEWS_CATEGORY_DATASET = load_dataset()
+
+
+def train_svm(category=NEWS_CATEGORY_DATASET, ratio_of_training_set=1):
     arr = []
-    with open(dataset) as file:
-        cat = json.load(file)
 
-    for c in cat:
-        arr.append([c['category'], c['headline']])
+    arr.extend([[c['category'], c['headline']] for c in category])
     for i in range(len(arr)):
         for j in range(len(list(NewsCategory))):
             if(list(NewsCategory)[j].name) == arr[i][0]:
@@ -377,7 +387,7 @@ def proceed_problem3(
     """
 
     # Feed each vector :math:`v \in V` to SVM.
-    svm: libsvm.svm()
+    svm = sklearn.svm.SVC()
     for v in V:
         break
     c: NewsCategory = NewsCategory.Default
@@ -406,14 +416,14 @@ def proceed_problem4(
     c: NewsCategory = max(occurrence_counts, key=occurrence_counts.get)
     return c.name
 
-# %%
-#x = train_svm()
 
+# %%
 vec_list = []
-url = input("Give a URL to me: ") or "https://google.com"
+url = input("Give a URL to me: ") or "https://buzzfeed.com"
 urls_and_sentences = proceed_problem1(url)
-# for sentence in urls_and_sentences:
-#     vec_list.append(proceed_problem2(sentence))
-
+for sentence in urls_and_sentences:
+    vec_list.append(proceed_problem2(sentence))
 
 # %%
+
+x = train_svm()
