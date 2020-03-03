@@ -2,12 +2,13 @@
 import csv
 import enum
 import re
+import string
 import sys
 import typing
 from typing import List, Set
 from urllib.parse import splitquery
 
-import editdistance
+# import editdistance
 import numpy as np
 import requests
 from bs4 import BeautifulSoup
@@ -45,9 +46,11 @@ def construct_tree_from(
     if delta_ < 0:
         raise ValueError(
             f"Max. depth must be positive. (delta_ as depth < {delta_})")
+
     if(url.startswith('/')):
         url = URL_LIST[0] + url
     URL_LIST.append(url)
+
     # Create an empty tree :math:`T`.
     tree = {"data": None, "nodes": None}
 
@@ -299,14 +302,13 @@ def proceed_problem2(
         List[bool] -- Vector :math:`v` as :math:`{0, 1}
     """
 
-
-
     # Create an vector :math:`v` with 0's.
-
     vec = [False for i in range(len(english_dictionary))]
-    sentence = re.sub(r'[\'\"\[\]\(\)!+?=.,*\!]', ' ', sentence)
+
+    sentence = re.sub(f"[{string.punctuation}]", ' ', sentence)
     words = sentence.split()
     for word in words:
+        # TODO: Use `word` as a key of the dictionary
         for k, word_definition in english_dictionary.items():
             if not vec[k]:
                 if word == edit_distance(word_definition[0], english_dictionary):
