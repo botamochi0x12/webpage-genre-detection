@@ -343,8 +343,8 @@ PATH_TO_DATASET = 'News_Category_Dataset_v2_new.json'
 
 def load_dataset(path_to_dataset=PATH_TO_DATASET):
     with open(path_to_dataset) as file:
-        category = json.load(file)
-    return category
+        dataset = json.load(file)
+    return dataset
 
 
 NEWS_CATEGORY_DATASET = load_dataset()
