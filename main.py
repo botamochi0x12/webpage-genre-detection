@@ -4,8 +4,11 @@ import enum
 import re
 import sys
 import typing
+
+import json
 from typing import List, Set
 from urllib.parse import splitquery
+import sklearn.svm as svm
 
 import editdistance
 import numpy as np
@@ -19,6 +22,7 @@ Sentence = typing.NewType("Sentence", str)
 NewsCategory = enum.Enum("NewsCategory", "Default")
 try:
     with open("categories.csv") as f:
+        f.readline()
         NewsCategory = enum.Enum(
             "NewsCategory", [row[0] for row in csv.reader(f) if row[0]])
 except OSError as ex:
@@ -226,18 +230,11 @@ DICTIONARY_PATHS = [
 EXCEPTIONAL_DICTIONARY_PATH = "WordNet/exc"
 EDIT_DISTANCE_LIMIT = 12
 
-def edit_distance(w, english_dictionary):
-    d = np.inf
-    k_ = None
-    for k, e in english_dictionary.items():
-        d_ = editdistance.eval(w, e[0])
-        if(d_ < d and d_ < EDIT_DISTANCE_LIMIT):
-            d = d_
-            k_ = k
-    return english_dictionary[k_][0]
+
 
 def load_dictionary():
     # Load the structure.
+    n = 0
     dictionary = {}
     full_lines = []
     files = DICTIONARY_PATHS
@@ -248,6 +245,7 @@ def load_dictionary():
     words = [w.split()[0].replace("_", " ") for w in full_lines]
     tags = [t.split()[1] for t in full_lines]
     structure = np.array([words, tags]).T.tolist()
+    print(structure)
 
     # Load exceptional structures for verbs.
     verbs = []
@@ -256,30 +254,45 @@ def load_dictionary():
             verbs.append(x)
     verbs = [w.split() for w in verbs]
     for struct in structure:
-        if struct[1] != 'v':
-            continue
-        for verb in verbs:
-            if struct[0] == verb[0]:
-                if len(struct) < 3:
-                    struct.append('True')
-                    struct.append(verb[1])
-                    struct.append(verb[2])
-                else:
-                    struct[2] = 'True'
-                    struct[3] = verb[1]
-                    struct[4] = verb[2]
-            else:
-                if len(struct) < 3:
-                    struct.append('False')
-                    struct.append("")
-                    struct.append("")
+        if struct[1] == 'v':
+            for verb in verbs:
+                if struct[0] == verb[0]:
+                    if len(struct) < 3:
+                        struct.append('True')
+                        struct.append(verb[1])
+                        struct.append(verb[2])
+                    else:
+                        struct[2] = 'True'
+                        struct[3] = verb[1]
+                        struct[4] = verb[2]
+        else:
+            if len(struct) < 3:
+                struct.append('False')
+                struct.append("")
+                struct.append("")
+        struct.append(n)
+        n = n + 1
     for s in range(len(structure)):
-        dictionary[s] = structure[s]
+        dictionary[structure[s][0]] = structure[s]
     return dictionary
 
 
 ENGLISH_WORD_WITH_PARAMETER_DICTIONARY = load_dictionary()
 
+def complete_edit_distance(w, english_dictionary=ENGLISH_WORD_WITH_PARAMETER_DICTIONARY):
+    d = np.inf
+    wrd_ = None
+    if w not in english_dictionary:
+        for k, e in english_dictionary.items():
+            d_ = editdistance.eval(w, e[0])
+            if(d_ < d and d_ < EDIT_DISTANCE_LIMIT):
+                d = d_
+                wrd_ = k
+        if(wrd_ is not None):
+            return english_dictionary[wrd_][0]
+        else:
+            return wrd_
+    return w
 
 def proceed_problem2(
         sentence: Sentence,
@@ -307,10 +320,13 @@ def proceed_problem2(
     sentence = re.sub(r'[\'\"\[\]\(\)!+?=.,*\!]', ' ', sentence)
     words = sentence.split()
     for word in words:
-        for k, word_definition in english_dictionary.items():
-            if not vec[k]:
-                if word == edit_distance(word_definition[0], english_dictionary):
-                    vec[k] = True
+        edited = complete_edit_distance(word, english_dictionary)
+        if edited in english_dictionary:
+            try:
+                print(english_dictionary[edited][5])
+            except:
+                print(english_dictionary[edited])
+            vec[english_dictionary[edited][5]] = True
 
     # Match the index of tuple :math:`w` in :math:`D`,
     # replace :math:`v[i]` by 1.
@@ -318,8 +334,28 @@ def proceed_problem2(
 
 
 # %%
+NEWS_CATEGORY_FILE = 'News_Category_Dataset_v2_new.json'
 KERNEL_FUNCTION = None
 
+def train_svm(dataset=NEWS_CATEGORY_FILE, ratio_of_training_set=1):
+    arr = []
+    with open(dataset) as file:
+        cat = json.load(file)
+
+    for c in cat:
+        arr.append([c['category'], c['headline']])
+    for i in range(len(arr)):
+        for j in range(len(list(NewsCategory))):
+            if(list(NewsCategory)[j].name) == arr[i][0]:
+                arr[i][0] = j
+                break
+    for i in range(len(arr)):
+        arr[i][1] = proceed_problem2(arr[i][1])
+        if(i % 100 == 0):
+            print("Step " + str(i))
+    
+    return arr
+            
 
 def proceed_problem3(
         V: List[List[bool]],
@@ -341,7 +377,7 @@ def proceed_problem3(
     """
 
     # Feed each vector :math:`v \in V` to SVM.
-    svm: typing.Any
+    svm: libsvm.svm()
     for v in V:
         break
     c: NewsCategory = NewsCategory.Default
@@ -371,7 +407,7 @@ def proceed_problem4(
     return c.name
 
 # %%
-
+#x = train_svm()
 
 vec_list = []
 url = input("Give a URL to me: ") or "https://google.com"
