@@ -1,5 +1,4 @@
 # %%
-import csv
 import enum
 import json
 import re
@@ -21,10 +20,18 @@ Sentence = typing.NewType("Sentence", str)
 
 NewsCategory = enum.Enum("NewsCategory", "Default")
 try:
-    with open("categories.csv") as f:
-        f.readline()
-        NewsCategory = enum.Enum(
-            "NewsCategory", [row[0] for row in csv.reader(f) if row[0]])
+    NewsCategory = enum.Enum(
+        "NewsCategory",
+        list(
+            np.loadtxt(
+                "categories.csv",
+                dtype=np.str,
+                delimiter=",",
+                skiprows=1,
+                usecols=0,
+                )
+            )
+        )
 except OSError as ex:
     print(ex, file=sys.stderr)
 
@@ -235,8 +242,7 @@ def load_dictionary():
     files = DICTIONARY_PATHS
     for f in files:
         with open(f, "r") as fi:
-            for x in fi:
-                full_lines.append(x)
+            full_lines.extend(fi.readlines())
     words = [w.split()[0].replace("_", " ") for w in full_lines]
     tags = [t.split()[1] for t in full_lines]
     structure = np.array([words, tags]).T.tolist()
@@ -245,8 +251,7 @@ def load_dictionary():
     # Load exceptional structures for verbs.
     verbs = []
     with open(EXCEPTIONAL_DICTIONARY_PATH, "r") as fi:
-        for x in fi:
-            verbs.append(x)
+        verbs.extend(fi.readlines())
     verbs = [w.split() for w in verbs]
 
     for id_, struct in enumerate(structure):
@@ -342,7 +347,7 @@ PATH_TO_DATASET = 'News_Category_Dataset_v2_new.json'
 
 
 def load_dataset(path_to_dataset=PATH_TO_DATASET):
-    with open(path_to_dataset) as file:
+    with open(path_to_dataset, "r") as file:
         dataset = json.load(file)
     return dataset
 
