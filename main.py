@@ -235,6 +235,7 @@ def edit_distance(w, english_dictionary):
             k_ = k
     return english_dictionary[k_][0]
 
+
 def load_dictionary():
     # Load the structure.
     dictionary = {}
@@ -301,9 +302,10 @@ def proceed_problem2(
     # Create an vector :math:`v` with 0's.
     vec = [False for i in range(len(english_dictionary))]
 
-    sentence = re.sub(f"[{string.punctuation}]", ' ', sentence)
+    sentence = re.sub(f"[{string.punctuation}{string.digits}]", ' ', sentence)
     words = sentence.split()
-    for word in words:
+    non_empty_words = (w for w in words if w)
+    for word in non_empty_words:
         # TODO: Use `word` as a key of the dictionary
         for k, word_definition in english_dictionary.items():
             if not vec[k]:
