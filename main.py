@@ -2,6 +2,7 @@
 import dataclasses
 import enum
 import json
+import logging
 import re
 import string
 import sys
@@ -9,11 +10,15 @@ import typing
 from typing import Dict, List, Set
 from urllib.parse import splitquery
 
-import editdistance
+# import editdistance
 import numpy as np
 import requests
 import sklearn.svm
 from bs4 import BeautifulSoup
+
+logging.basicConfig(filename=".log", level=logging.INFO)
+logger: logging.Logger = logging.getLogger("webpage_genre_detection")
+logger.addHandler(logging.StreamHandler(sys.stdout))
 
 uint = typing.NewType("unsigned_int", int)
 URL = typing.NewType("URL", str)
@@ -92,7 +97,7 @@ def scoop(
     # From HTML script, get new URLs
     for anchor in unique_anchors:
         # TODO: Fix below since each `tree` is local
-        print(anchor["href"])
+        logger.debug(anchor["href"])
         try:
             # Apply until tree reaches depth :math:`δ`.
             yield construct_tree_from(
@@ -187,7 +192,7 @@ def flatten(nodes, *, sigma=SIGMA, on_demand=False) -> List[Sentence]:
         # and derive maximum :math:`σ` sentences.
         # Add each sentence :math:`s` into :math:`\mathcal{X}`.
         sentences = list(parsed(soup, sigma=sigma))
-        print({
+        logger.debug({
             "url": url,
             "content": sentences,
         })
@@ -239,7 +244,10 @@ class Tense:
     id: int
 
     def __getitem__(self, i: int):
-        # Deprecated method
+        logger.warning((
+            "The use of Tense[i] is deprecated. "
+            "Please call one of its properties. "
+            ))
 
         if i == 0:
             return self.present
@@ -405,7 +413,7 @@ def train_svm(dataset=NEWS_CATEGORY_DATASET, ratio_of_training_set=1.0):
     for i in range(len(arr)):
         arr[i][1] = proceed_problem2(arr[i][1])
         if (i % 100) == 0:
-            print(f"Step {i}")
+            logger.debug(f"Step {i}")
 
     return arr
 
