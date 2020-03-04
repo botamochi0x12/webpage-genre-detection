@@ -9,7 +9,7 @@ import typing
 from typing import Dict, List, Set
 from urllib.parse import splitquery
 
-# import editdistance
+import editdistance
 import numpy as np
 import requests
 import sklearn.svm
@@ -238,6 +238,22 @@ class Tense:
     perfect: str
     id: int
 
+    def __getitem__(self, i: int):
+        # Deprecated method
+
+        if i == 0:
+            return self.present
+        if i == 1:
+            return self.speech
+        if i == 2:
+            return self.is_irregular
+        if i == 3:
+            return self.past
+        if i == 4:
+            return self.perfect
+        if i == 5:
+            return self.id
+
 
 # %%
 DICTIONARY_PATHS = [
@@ -250,7 +266,7 @@ EXCEPTIONAL_DICTIONARY_PATH = "WordNet/exc"
 EDIT_DISTANCE_LIMIT = 12
 
 
-def load_dictionary():
+def load_dictionary() -> Dict[str, Tense]:
     # Load the structure.
     full_lines = []
     files = DICTIONARY_PATHS
@@ -313,22 +329,22 @@ ENGLISH_WORD_WITH_PARAMETER_DICTIONARY = load_dictionary()
 
 
 def complete_edit_distance(
-    w,
+    word,
     english_dictionary=ENGLISH_WORD_WITH_PARAMETER_DICTIONARY
 ):
-    d = np.inf
-    wrd_ = None
-    if w not in english_dictionary:
-        for k, e in english_dictionary.items():
-            d_ = editdistance.eval(w, e[0])
-            if(d_ < d and d_ < EDIT_DISTANCE_LIMIT):
-                d = d_
-                wrd_ = k
-        if(wrd_ is not None):
-            return english_dictionary[wrd_][0]
-        else:
-            return wrd_
-    return w
+    if word in english_dictionary:
+        return word
+
+    min_dist = np.inf
+    nearest = None
+    for k, v in english_dictionary.items():
+        dist = editdistance.eval(word, v[0])
+        if(dist < min_dist and dist < EDIT_DISTANCE_LIMIT):
+            min_dist = dist
+            nearest = k
+    if nearest is None:
+        return None
+    return english_dictionary[nearest][0]
 
 
 def proceed_problem2(
@@ -358,12 +374,7 @@ def proceed_problem2(
     for word in non_empty_words:
         # TODO: Use `word` as a key of the dictionary
         edited = complete_edit_distance(word, english_dictionary)
-        if edited in english_dictionary:
-            try:
-                print(english_dictionary[edited][5])
-            except KeyError as ex:
-                print(english_dictionary[edited], file=sys.stderr)
-                print(ex, file=sys.stderr)
+        if edited and edited in english_dictionary:
             vec[english_dictionary[edited][5]] = True
 
     # Match the index of tuple :math:`w` in :math:`D`,
@@ -385,19 +396,16 @@ def load_dataset(path_to_dataset=PATH_TO_DATASET):
 NEWS_CATEGORY_DATASET = load_dataset()
 
 
-def train_svm(category=NEWS_CATEGORY_DATASET, ratio_of_training_set=1):
-    arr = []
+def train_svm(dataset=NEWS_CATEGORY_DATASET, ratio_of_training_set=1.0):
+    arr = [
+        [NewsCategory[news['category']].value, news['headline']]
+        for news in dataset
+        ]
 
-    arr.extend([[c['category'], c['headline']] for c in category])
-    for i in range(len(arr)):
-        for j in range(len(list(NewsCategory))):
-            if(list(NewsCategory)[j].name) == arr[i][0]:
-                arr[i][0] = j
-                break
     for i in range(len(arr)):
         arr[i][1] = proceed_problem2(arr[i][1])
-        if(i % 100 == 0):
-            print("Step " + str(i))
+        if (i % 100) == 0:
+            print(f"Step {i}")
 
     return arr
 
