@@ -1,18 +1,19 @@
 # %%
+import dataclasses
 import enum
 import json
 import re
 import string
 import sys
 import typing
-from typing import List, Set
+from typing import Dict, List, Set
 from urllib.parse import splitquery
 
-from bs4 import BeautifulSoup
 # import editdistance
 import numpy as np
 import requests
 import sklearn.svm
+from bs4 import BeautifulSoup
 
 uint = typing.NewType("unsigned_int", int)
 URL = typing.NewType("URL", str)
@@ -226,6 +227,19 @@ def proceed_problem1(
 
 
 # %%
+@dataclasses.dataclass
+class Tense:
+    """Tense for English
+    """
+    present: str
+    speech: str
+    is_irregular: bool
+    past: str
+    perfect: str
+    id: int
+
+
+# %%
 DICTIONARY_PATHS = [
     "WordNet/index.adj",
     "WordNet/index.adv",
@@ -246,36 +260,52 @@ def load_dictionary():
     words = [w.split()[0].replace("_", " ") for w in full_lines]
     tags = [t.split()[1] for t in full_lines]
     structure = np.array([words, tags]).T.tolist()
-    print(structure)
 
     # Load exceptional structures for verbs.
-    verbs = []
+    # NOTE: ["have", "had", "had"] is not contained in the dictionary.
     with open(EXCEPTIONAL_DICTIONARY_PATH, "r") as fi:
-        verbs.extend(fi.readlines())
-    verbs = [w.split() for w in verbs]
-
-    for id_, struct in enumerate(structure):
-        if struct[1] == 'v':
-            for verb in verbs:
-                if struct[0] == verb[0]:
-                    if len(struct) < 3:
-                        struct.append('True')
-                        struct.append(verb[1])
-                        struct.append(verb[2])
-                    else:
-                        struct[2] = 'True'
-                        struct[3] = verb[1]
-                        struct[4] = verb[2]
-        else:
-            if len(struct) < 3:
-                struct.append('False')
-                struct.append("")
-                struct.append("")
-        struct.append(id_)
+        verb_dict: Dict[List[str]] = dict([
+            (line.split()[0], line.split())
+            for line in fi.readlines() if line
+            ])
 
     dictionary = {}
-    for s in range(len(structure)):
-        dictionary[structure[s][0]] = structure[s]
+    for id_, lst in enumerate(structure):
+
+        tense: Tense
+        if lst[1] == 'v':  # Verb
+            if lst[0] in verb_dict:
+                verb = verb_dict[lst[0]]
+                tense = Tense(
+                    verb[0],
+                    "v",
+                    True,
+                    verb[1],
+                    verb[2],
+                    id_,
+                )
+            else:
+                tense = Tense(
+                    lst[0],
+                    "v",
+                    False,
+                    lst[3] if 2 < len(lst) else "",
+                    lst[4] if 2 < len(lst) else "",
+                    id_,
+                )
+        else:
+            tense = Tense(
+                lst[0],
+                lst[1],
+                False,
+                lst[3] if 2 < len(lst) else "",
+                lst[4] if 2 < len(lst) else "",
+                id_,
+            )
+
+        assert(tense)
+        dictionary[tense.present] = tense
+
     return dictionary
 
 
