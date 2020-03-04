@@ -10,7 +10,7 @@ import typing
 from typing import Dict, List, Set
 from urllib.parse import splitquery
 
-# import editdistance
+import editdistance
 import numpy as np
 import requests
 import sklearn.svm
@@ -346,13 +346,13 @@ def complete_edit_distance(
     min_dist = np.inf
     nearest = None
     for k, v in english_dictionary.items():
-        dist = editdistance.eval(word, v[0])
+        dist = editdistance.eval(word, v.present)
         if(dist < min_dist and dist < EDIT_DISTANCE_LIMIT):
             min_dist = dist
             nearest = k
     if nearest is None:
         return None
-    return english_dictionary[nearest][0]
+    return english_dictionary[nearest].present
 
 
 def proceed_problem2(
@@ -383,7 +383,7 @@ def proceed_problem2(
         # TODO: Use `word` as a key of the dictionary
         edited = complete_edit_distance(word, english_dictionary)
         if edited and edited in english_dictionary:
-            vec[english_dictionary[edited][5]] = True
+            vec[english_dictionary[edited].id] = True
 
     # Match the index of tuple :math:`w` in :math:`D`,
     # replace :math:`v[i]` by 1.
@@ -422,7 +422,7 @@ def proceed_problem3(
         V: List[List[bool]],
         C: Set[NewsCategory] = set(NewsCategory),
         f=KERNEL_FUNCTION,
-) -> int:
+) -> NewsCategory:
     r"""Classification of SVM
 
     Arguments:
@@ -434,46 +434,47 @@ def proceed_problem3(
         f -- Kernel function (default: {KERNEL_FUNCTION})
 
     Returns:
-        int -- Category :math:`c`
+        NewsCategory -- Category :math:`c`
     """
 
     # Feed each vector :math:`v \in V` to SVM.
-    svm = sklearn.svm.SVC()
+    svm: sklearn.svm.SVC
     for v in V:
         break
     c: NewsCategory = NewsCategory.Default
-    return c.value
+    return c
 
 # %%
 
 
 def proceed_problem4(
         C: List[NewsCategory],
-) -> str:
+) -> NewsCategory:
     r"""Get the maximum occurrence count of news categories
 
     Arguments:
         C {List[NewsCategory]} -- List of every category :math:`c \in C`
 
     Returns:
-        str -- Category :math:`c` as string
+        NewsCategory -- Category :math:`c`
     """
     # Count unique :math:`c` and return an array.
-    occurrence_counts = dict((c, 0) for c in NewsCategory)
+    occurrence_counts = dict([c, 0] for c in NewsCategory)
     for c in C:
         occurrence_counts[c] += 1
 
     # Select the maximum of the array.
     c: NewsCategory = max(occurrence_counts, key=occurrence_counts.get)
-    return c.name
+    return c
 
 
 # %%
 vec_list = []
 url = input("Give a URL to me: ") or "https://buzzfeed.com"
-urls_and_sentences = proceed_problem1(url)
-for sentence in urls_and_sentences:
+sentences = proceed_problem1(url)
+for sentence in sentences:
     vec_list.append(proceed_problem2(sentence))
+c = proceed_problem3(vec_list)
 
 # %%
 
