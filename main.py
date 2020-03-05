@@ -4,11 +4,12 @@ import enum
 import re
 import sys
 import typing
+from collections import Counter
 
 import json
 from typing import List, Set
 from urllib.parse import splitquery
-import sklearn.svm as svm
+import sklearn.linear_model as svm
 
 import editdistance
 import numpy as np
@@ -245,7 +246,7 @@ def load_dictionary():
     words = [w.split()[0].replace("_", " ") for w in full_lines]
     tags = [t.split()[1] for t in full_lines]
     structure = np.array([words, tags]).T.tolist()
-    print(structure)
+
 
     # Load exceptional structures for verbs.
     verbs = []
@@ -297,7 +298,7 @@ def complete_edit_distance(w, english_dictionary=ENGLISH_WORD_WITH_PARAMETER_DIC
 def proceed_problem2(
         sentence: Sentence,
         english_dictionary=ENGLISH_WORD_WITH_PARAMETER_DICTIONARY,
-) -> List[bool]:
+) -> List[int]:
     r"""Creation of a parse vector generated from the input.
 
     Arguments:
@@ -309,14 +310,14 @@ def proceed_problem2(
             (default: {ENGLISH_WORD_WITH_PARAMATER_DICTIONARY})
 
     Returns:
-        List[bool] -- Vector :math:`v` as :math:`{0, 1}
+        List[int] -- Vector :math:`v` as :math:`{-1, 1}
     """
 
 
 
     # Create an vector :math:`v` with 0's.
 
-    vec = [False for i in range(len(english_dictionary))]
+    vec = [-1 for i in range(len(english_dictionary))]
     sentence = re.sub(r'[\'\"\[\]\(\)!+?=.,*\!]', ' ', sentence)
     words = sentence.split()
     for word in words:
@@ -326,7 +327,7 @@ def proceed_problem2(
                 print(english_dictionary[edited][5])
             except:
                 print(english_dictionary[edited])
-            vec[english_dictionary[edited][5]] = True
+            vec[english_dictionary[edited][5]] = 1
 
     # Match the index of tuple :math:`w` in :math:`D`,
     # replace :math:`v[i]` by 1.
@@ -336,52 +337,53 @@ def proceed_problem2(
 # %%
 NEWS_CATEGORY_FILE = 'News_Category_Dataset_v2_new.json'
 KERNEL_FUNCTION = None
+BATCH_COUNT = 200
+
+def generate_dummy_data(count = BATCH_COUNT):
+    data = np.random.randint(low=0, high=2, size=(count, len(ENGLISH_WORD_WITH_PARAMETER_DICTIONARY)))
+    data = data * 2 - 1
+    return data
 
 def train_svm(dataset=NEWS_CATEGORY_FILE, ratio_of_training_set=1):
-    arr = []
-    with open(dataset) as file:
-        cat = json.load(file)
+    for i in range(10):
+        print(i)
+        X = generate_dummy_data()
+        y = np.random.randint(low=0, high=len(NewsCategory), size=len(X))
+        model = svm.SGDClassifier()
+        model.partial_fit(X, y, classes=range(len(NewsCategory)))
 
-    for c in cat:
-        arr.append([c['category'], c['headline']])
-    for i in range(len(arr)):
-        for j in range(len(list(NewsCategory))):
-            if(list(NewsCategory)[j].name) == arr[i][0]:
-                arr[i][0] = j
-                break
-    for i in range(len(arr)):
-        arr[i][1] = proceed_problem2(arr[i][1])
-        if(i % 100 == 0):
-            print("Step " + str(i))
+# Real code starts from here. Before is temporary code!
+
+#    for c in cat:
+#        y.append(NewsCategory[c['category']].value)
     
-    return arr
-            
+    return model
+#       
+#SVM = train_svm()
 
 def proceed_problem3(
-        V: List[List[bool]],
-        C: Set[NewsCategory] = set(NewsCategory),
-        f=KERNEL_FUNCTION,
+        V,
+        m=SVM
 ) -> int:
-    r"""Classification of SVM
-
-    Arguments:
-        V {List[List[bool]]} -- Set of every vector :math:` v \in V`
-
-    Keyword Arguments:
-        C {Set[NewsCategory]} -- Pre-processed categories
-            from News Category Data-set (default: {set(NewsCategory)})
-        f -- Kernel function (default: {KERNEL_FUNCTION})
-
-    Returns:
-        int -- Category :math:`c`
-    """
+    ''' (The definitions should be rewritten. I had some changes to make.) '''
+#    r"""Classification of SVM
+#
+#    Arguments:
+#        V {List[List[bool]]} -- Set of every vector :math:` v \in V`
+#
+#    Keyword Arguments:
+#        C {Set[NewsCategory]} -- Pre-processed categories
+#            from News Category Data-set (default: {set(NewsCategory)})
+#        f -- Kernel function (default: {KERNEL_FUNCTION})
+#
+#    Returns:
+#        int -- Category :math:`c`
+#    """
 
     # Feed each vector :math:`v \in V` to SVM.
-    svm: libsvm.svm()
-    for v in V:
-        break
-    c: NewsCategory = NewsCategory.Default
-    return c.value
+    C = m.predict(V)
+    
+    return np.bincount(C).argmax()
 
 # %%
 
@@ -407,10 +409,13 @@ def proceed_problem4(
     return c.name
 
 # %%
-#x = train_svm()
+vec = np.random.randint(low=0, high=2, size=(5, len(ENGLISH_WORD_WITH_PARAMETER_DICTIONARY)))
+vec = vec * 2 - 1
+res = proceed_problem3(vec)
+print(NewsCategory(res + 1)) # The indexing issue of enums.
 
-vec_list = []
-url = input("Give a URL to me: ") or "https://google.com"
-urls_and_sentences = proceed_problem1(url)
-for sentence in urls_and_sentences:
-    vec_list.append(proceed_problem2(sentence))
+#vec_list = []
+#url = input("Give a URL to me: ") or "https://google.com"
+#urls_and_sentences = proceed_problem1(url)
+#for sentence in urls_and_sentences:
+#    vec_list.append(proceed_problem2(sentence))
