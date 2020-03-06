@@ -12,19 +12,19 @@ import typing
 from typing import Dict, List
 from urllib.parse import splitquery
 
-import editdistance
 import numpy as np
 import requests
 from bs4 import BeautifulSoup
 from sklearn.linear_model import SGDClassifier as SVM
 from symspellpy.symspellpy import SymSpell, Verbosity
 
-sym_spell = SymSpell(2, 7)
-sym_spell.create_dictionary("frequency_dictionary_en_82_765.txt")
-
 logging.basicConfig(filename=".log", level=logging.INFO)
 logger: logging.Logger = logging.getLogger("webpage_genre_detection")
 logger.addHandler(logging.StreamHandler(sys.stdout))
+
+sym_spell = SymSpell(2, 7)
+if not sym_spell.create_dictionary("frequency_dictionary_en_82_765.txt"):
+    logger.warning("Symspell isn't loaded!")
 
 uint = typing.NewType("unsigned_int", int)
 URL = typing.NewType("URL", str)
@@ -347,25 +347,18 @@ def complete_edit_distance(
     word,
     english_dictionary=ENGLISH_WORD_WITH_PARAMETER_DICTIONARY
 ):
-    word = sym_spell.lookup(word, Verbosity.ALL)
-    try:
-        word = word[0].term
-    except KeyError:
-        word = ''
-
     if word in english_dictionary:
-        return word
+        return english_dictionary[word].present
 
-    min_dist = np.inf
-    nearest = None
-    for k, v in english_dictionary.items():
-        dist = editdistance.eval(word, v.present)
-        if(dist < min_dist and dist < EDIT_DISTANCE_LIMIT):
-            min_dist = dist
-            nearest = k
-    if nearest is None:
+    similar = sym_spell.lookup(word, Verbosity.ALL)
+    if not similar:
         return None
-    return english_dictionary[nearest].present
+    nearest = similar[0].term
+
+    if nearest in english_dictionary:
+        return english_dictionary[nearest].present
+
+    return None
 
 
 def proceed_problem2(
@@ -403,6 +396,8 @@ def proceed_problem2(
 
 # %%
 PATH_TO_DATASET = 'News_Category_Dataset_v2_new.json'
+BASE_FILEPATH = "model"
+BATCH_COUNT = 200
 
 
 def load_dataset(path_to_dataset=PATH_TO_DATASET):
@@ -413,43 +408,41 @@ def load_dataset(path_to_dataset=PATH_TO_DATASET):
 
 NEWS_CATEGORY_DATASET = load_dataset()
 
-# %%
-FILENAME = "model"
-BATCH_COUNT = 200
 
-
-def save_model(model, filename):
-    with open(filename, 'wb') as f:
+def save_model(model, filepath):
+    with open(filepath, 'wb') as f:
         pickle.dump(model, f)
 
 
-def load_model(model, filename):
-    with open(filename, 'rb') as f:
-        pickle.load(model, f)
+def load_model(model, filepath):
+    with open(filepath, 'rb') as f:
+        return pickle.load(model, f)
 
 
-def train_svm(dataset=NEWS_CATEGORY_DATASET, ratio_of_training_set=1):
+def train_svm(dataset=NEWS_CATEGORY_DATASET, ratio_of_training_set=1.0):
 
+    model: SVM = SVM()
     for i in range(0, len(dataset), BATCH_COUNT):
         X = []
         y = []
-        print("Iteration {}-{} starts.".format(i, i + BATCH_COUNT))
+        logger.debug("Iteration {}-{} starts.".format(i, i + BATCH_COUNT))
+
         for c in dataset[i:i + BATCH_COUNT]:
             X.append(proceed_problem2(c['headline']))
-        for c in dataset[i:i + BATCH_COUNT]:
             y.append(NewsCategory[c['category']].value)
 
         X = np.asarray(X)
         y = np.asarray(y)
 
-        model: SVM = SVM()
+        # ? can a stochastic gradient decend model train itself
         model.partial_fit(X, y, classes=range(len(NewsCategory)))
 
-        if(i % 1000 == 0):
+        if (i % 1000) == 0:
             save_model(
                 model,
-                "{}{}.svm".format(
-                    FILENAME,
+                "{}-{}_{}.svm".format(
+                    BASE_FILEPATH,
+                    i,
                     datetime.datetime.today().strftime(r"%Y%m%dT%H%M%S")
                     )
                 )
@@ -462,19 +455,15 @@ svm = train_svm()
 
 def proceed_problem3(
         V,
-        C: List[NewsCategory] = list(NewsCategory),
         m: SVM = svm,
 ) -> int:
-    # TODO: The definitions should be rewritten. I had some changes to make.
     r"""Classification of SVM
 
     Arguments:
         V {List[List[bool]]} -- Set of every vector :math:` v \in V`
 
     Keyword Arguments:
-        C {Set[NewsCategory]} -- Pre-processed categories
-            from News Category Data-set (default: {set(NewsCategory)})
-        f -- Kernel function (default: {KERNEL_FUNCTION})
+        m {SVM} -- A model of Support Vector Machine (default: {svm})
 
     Returns:
         int -- Category :math:`c`
@@ -497,20 +486,22 @@ def proceed_problem4(
         C {List[int]} -- List of every category :math:`c \in C`
 
     Returns:
-        NewsCategory -- Category :math:`c`
+        str -- Category :math:`c`
     """
     # Count unique :math:`c` and return an array.
     return NewsCategory(np.bincount(C).argmax() + 1).name
 
 
 # %%
-categories = []
-for i in range(5):
-    vec_list = []
-    url = input("Give a URL to me: ") or "https://buzzfeed.com"
-    sentences = proceed_problem1(url)
-    for sentence in sentences:
-        vec_list.append(proceed_problem2(sentence))
-    c = proceed_problem3(vec_list)
-    categories.append(c)
-proceed_problem4(categories)
+if __name__ == "__main__":
+    categories = []
+    for i in range(1):
+        vec_list = []
+        url = input("Give a URL to me: ") or "https://buzzfeed.com"
+        sentences = proceed_problem1(url)
+        for sentence in sentences:
+            vec_list.append(proceed_problem2(sentence))
+        c = proceed_problem3(vec_list)
+        categories.append(c)
+    representative_category = proceed_problem4(categories)
+    logger.debug(representative_category)
