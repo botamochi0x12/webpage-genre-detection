@@ -1,20 +1,26 @@
 # %%
 import dataclasses
+import datetime
 import enum
 import json
 import logging
+import pickle
 import re
 import string
 import sys
 import typing
-from typing import Dict, List, Set
+from typing import Dict, List
 from urllib.parse import splitquery
 
 import editdistance
 import numpy as np
 import requests
-import sklearn.svm
 from bs4 import BeautifulSoup
+from sklearn.linear_model import SGDClassifier as SVM
+from symspellpy.symspellpy import SymSpell, Verbosity
+
+sym_spell = SymSpell(2, 7)
+sym_spell.create_dictionary("frequency_dictionary_en_82_765.txt")
 
 logging.basicConfig(filename=".log", level=logging.INFO)
 logger: logging.Logger = logging.getLogger("webpage_genre_detection")
@@ -206,16 +212,13 @@ def proceed_problem1(
         sigma: uint = SIGMA,
 ) -> List[Sentence]:
     r"""Create a web page tree to parse
-
     Arguments:
         url {URL} -- the URL of a web page
-
     Keyword Arguments:
         delta_ {uint} -- Max. depth of each tree (default: {DELTA})
         gamma {uint} -- Max. number of children of each node (default: {GAMMA})
         sigma {uint} -- Max. number of sentence of each web-page
             (default: {SIGMA})
-
     Returns:
         List[Sentence] -- Array of all derived sentences
     """
@@ -294,7 +297,7 @@ def load_dictionary() -> Dict[str, Tense]:
             ])
 
     dictionary = {}
-    for id_, lst in enumerate(structure):
+    for lst in structure:
 
         tense: Tense
         if lst[1] == 'v':  # Verb
@@ -306,7 +309,7 @@ def load_dictionary() -> Dict[str, Tense]:
                     True,
                     verb[1],
                     verb[2],
-                    id_,
+                    None,
                 )
             else:
                 tense = Tense(
@@ -315,7 +318,7 @@ def load_dictionary() -> Dict[str, Tense]:
                     False,
                     lst[3] if 2 < len(lst) else "",
                     lst[4] if 2 < len(lst) else "",
-                    id_,
+                    None,
                 )
         else:
             tense = Tense(
@@ -324,11 +327,15 @@ def load_dictionary() -> Dict[str, Tense]:
                 False,
                 lst[3] if 2 < len(lst) else "",
                 lst[4] if 2 < len(lst) else "",
-                id_,
+                None,
             )
 
         assert(tense)
         dictionary[tense.present] = tense
+
+    # Assign each id to the word definitions
+    for id_, item in enumerate(dictionary):
+        dictionary[item].id = id_
 
     return dictionary
 
@@ -340,6 +347,12 @@ def complete_edit_distance(
     word,
     english_dictionary=ENGLISH_WORD_WITH_PARAMETER_DICTIONARY
 ):
+    word = sym_spell.lookup(word, Verbosity.ALL)
+    try:
+        word = word[0].term
+    except KeyError:
+        word = ''
+
     if word in english_dictionary:
         return word
 
@@ -360,15 +373,12 @@ def proceed_problem2(
         english_dictionary=ENGLISH_WORD_WITH_PARAMETER_DICTIONARY,
 ) -> List[bool]:
     r"""Creation of a parse vector generated from the input.
-
     Arguments:
         sentence {Sentence} -- An English sentence from the web page tree
-
     Keyword Arguments:
         english_dictionary -- Dictionary of English words
             and their parameters, taken from open source libraries.
             (default: {ENGLISH_WORD_WITH_PARAMATER_DICTIONARY})
-
     Returns:
         List[bool] -- Vector :math:`v` as :math:`{0, 1}
     """
@@ -382,7 +392,8 @@ def proceed_problem2(
     for word in non_empty_words:
         # TODO: Use `word` as a key of the dictionary
         edited = complete_edit_distance(word, english_dictionary)
-        if edited and edited in english_dictionary:
+
+        if edited:  # not (None or empty string)
             vec[english_dictionary[edited].id] = True
 
     # Match the index of tuple :math:`w` in :math:`D`,
@@ -391,7 +402,6 @@ def proceed_problem2(
 
 
 # %%
-KERNEL_FUNCTION = None
 PATH_TO_DATASET = 'News_Category_Dataset_v2_new.json'
 
 
@@ -403,26 +413,59 @@ def load_dataset(path_to_dataset=PATH_TO_DATASET):
 
 NEWS_CATEGORY_DATASET = load_dataset()
 
+# %%
+FILENAME = "model"
+BATCH_COUNT = 200
 
-def train_svm(dataset=NEWS_CATEGORY_DATASET, ratio_of_training_set=1.0):
-    arr = [
-        [NewsCategory[news['category']].value, news['headline']]
-        for news in dataset
-        ]
 
-    for i in range(len(arr)):
-        arr[i][1] = proceed_problem2(arr[i][1])
-        if (i % 100) == 0:
-            logger.debug(f"Step {i}")
+def save_model(model, filename):
+    with open(filename, 'wb') as f:
+        pickle.dump(model, f)
 
-    return arr
+
+def load_model(model, filename):
+    with open(filename, 'rb') as f:
+        pickle.load(model, f)
+
+
+def train_svm(dataset=NEWS_CATEGORY_DATASET, ratio_of_training_set=1):
+
+    for i in range(0, len(dataset), BATCH_COUNT):
+        X = []
+        y = []
+        print("Iteration {}-{} starts.".format(i, i + BATCH_COUNT))
+        for c in dataset[i:i + BATCH_COUNT]:
+            X.append(proceed_problem2(c['headline']))
+        for c in dataset[i:i + BATCH_COUNT]:
+            y.append(NewsCategory[c['category']].value)
+
+        X = np.asarray(X)
+        y = np.asarray(y)
+
+        model: SVM = SVM()
+        model.partial_fit(X, y, classes=range(len(NewsCategory)))
+
+        if(i % 1000 == 0):
+            save_model(
+                model,
+                "{}{}.svm".format(
+                    FILENAME,
+                    datetime.datetime.today().strftime(r"%Y%m%dT%H%M%S")
+                    )
+                )
+
+    return model
+
+
+svm = train_svm()
 
 
 def proceed_problem3(
-        V: List[List[bool]],
-        C: Set[NewsCategory] = set(NewsCategory),
-        f=KERNEL_FUNCTION,
-) -> NewsCategory:
+        V,
+        C: List[NewsCategory] = list(NewsCategory),
+        m: SVM = svm,
+) -> int:
+    # TODO: The definitions should be rewritten. I had some changes to make.
     r"""Classification of SVM
 
     Arguments:
@@ -434,48 +477,40 @@ def proceed_problem3(
         f -- Kernel function (default: {KERNEL_FUNCTION})
 
     Returns:
-        NewsCategory -- Category :math:`c`
+        int -- Category :math:`c`
     """
 
     # Feed each vector :math:`v \in V` to SVM.
-    svm: sklearn.svm.SVC
-    for v in V:
-        break
-    c: NewsCategory = NewsCategory.Default
-    return c
+    C = m.predict(V)
+
+    return np.bincount(C).argmax()
 
 # %%
 
 
 def proceed_problem4(
-        C: List[NewsCategory],
-) -> NewsCategory:
+        C: List[int],
+) -> str:
     r"""Get the maximum occurrence count of news categories
 
     Arguments:
-        C {List[NewsCategory]} -- List of every category :math:`c \in C`
+        C {List[int]} -- List of every category :math:`c \in C`
 
     Returns:
         NewsCategory -- Category :math:`c`
     """
     # Count unique :math:`c` and return an array.
-    occurrence_counts = dict([c, 0] for c in NewsCategory)
-    for c in C:
-        occurrence_counts[c] += 1
-
-    # Select the maximum of the array.
-    c: NewsCategory = max(occurrence_counts, key=occurrence_counts.get)
-    return c
+    return NewsCategory(np.bincount(C).argmax() + 1).name
 
 
 # %%
-vec_list = []
-url = input("Give a URL to me: ") or "https://buzzfeed.com"
-sentences = proceed_problem1(url)
-for sentence in sentences:
-    vec_list.append(proceed_problem2(sentence))
-c = proceed_problem3(vec_list)
-
-# %%
-
-x = train_svm()
+categories = []
+for i in range(5):
+    vec_list = []
+    url = input("Give a URL to me: ") or "https://buzzfeed.com"
+    sentences = proceed_problem1(url)
+    for sentence in sentences:
+        vec_list.append(proceed_problem2(sentence))
+    c = proceed_problem3(vec_list)
+    categories.append(c)
+proceed_problem4(categories)
