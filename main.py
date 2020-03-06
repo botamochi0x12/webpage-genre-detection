@@ -1,20 +1,31 @@
 # %%
-import csv
+import dataclasses
 import enum
+import json
+import datetime
+import logging
+import pickle
 import re
+import string
 import sys
 import typing
-from collections import Counter
-
-import json
-from typing import List, Set
+from typing import Dict, List, Set
 from urllib.parse import splitquery
-import sklearn.linear_model as svm
+
+from symspellpy.symspellpy import SymSpell, Verbosity
+sym_spell = SymSpell(2, 7)
+sym_spell.create_dictionary("frequency_dictionary_en_82_765.txt")
+
 
 import editdistance
 import numpy as np
 import requests
+import sklearn.linear_model
 from bs4 import BeautifulSoup
+
+logging.basicConfig(filename=".log", level=logging.INFO)
+logger: logging.Logger = logging.getLogger("webpage_genre_detection")
+logger.addHandler(logging.StreamHandler(sys.stdout))
 
 uint = typing.NewType("unsigned_int", int)
 URL = typing.NewType("URL", str)
@@ -22,10 +33,18 @@ Sentence = typing.NewType("Sentence", str)
 
 NewsCategory = enum.Enum("NewsCategory", "Default")
 try:
-    with open("categories.csv") as f:
-        f.readline()
-        NewsCategory = enum.Enum(
-            "NewsCategory", [row[0] for row in csv.reader(f) if row[0]])
+    NewsCategory = enum.Enum(
+        "NewsCategory",
+        list(
+            np.loadtxt(
+                "categories.csv",
+                dtype=np.str,
+                delimiter=",",
+                skiprows=1,
+                usecols=0,
+                )
+            )
+        )
 except OSError as ex:
     print(ex, file=sys.stderr)
 
@@ -50,9 +69,11 @@ def construct_tree_from(
     if delta_ < 0:
         raise ValueError(
             f"Max. depth must be positive. (delta_ as depth < {delta_})")
+
     if(url.startswith('/')):
         url = URL_LIST[0] + url
     URL_LIST.append(url)
+
     # Create an empty tree :math:`T`.
     tree = {"data": None, "nodes": None}
 
@@ -76,23 +97,19 @@ def scoop(
     delta_,
     gamma=GAMMA,
 ):
-    gamma_ = gamma
+    unique_anchors = (
+        a for a in soup.find_all("a") if not is_duplicated(a["href"]))
+
     # Create new children not exceeding :math:`γ`.
     # From HTML script, get new URLs
-    for anchor in soup.find_all("a"):
+    for anchor in unique_anchors:
         # TODO: Fix below since each `tree` is local
-        print(anchor["href"])
-        if gamma_ == 0:
-            break
-        if is_duplicated(anchor["href"]):
-            print("pass")
-            continue
+        logger.debug(anchor["href"])
         try:
             # Apply until tree reaches depth :math:`δ`.
             yield construct_tree_from(
                     url=anchor["href"],
                     delta_=delta_-1, gamma=gamma)
-            gamma_ = gamma_ - 1
         except requests.exceptions.MissingSchema as ex:
             print(ex, file=sys.stderr)
         except requests.exceptions.InvalidSchema as ex:
@@ -182,7 +199,7 @@ def flatten(nodes, *, sigma=SIGMA, on_demand=False) -> List[Sentence]:
         # and derive maximum :math:`σ` sentences.
         # Add each sentence :math:`s` into :math:`\mathcal{X}`.
         sentences = list(parsed(soup, sigma=sigma))
-        print({
+        logger.debug({
             "url": url,
             "content": sentences,
         })
@@ -196,16 +213,13 @@ def proceed_problem1(
         sigma: uint = SIGMA,
 ) -> List[Sentence]:
     r"""Create a web page tree to parse
-
     Arguments:
         url {URL} -- the URL of a web page
-
     Keyword Arguments:
         delta_ {uint} -- Max. depth of each tree (default: {DELTA})
         gamma {uint} -- Max. number of children of each node (default: {GAMMA})
         sigma {uint} -- Max. number of sentence of each web-page
             (default: {SIGMA})
-
     Returns:
         List[Sentence] -- Array of all derived sentences
     """
@@ -222,6 +236,39 @@ def proceed_problem1(
 
 
 # %%
+@dataclasses.dataclass
+class Tense:
+    """Tense for English
+    """
+    present: str
+    speech: str
+    is_irregular: bool
+    past: str
+    perfect: str
+    id: int
+
+    def __getitem__(self, i: int):
+        logger.warning((
+            "The use of Tense[i] is deprecated. "
+            "Please call one of its properties. "
+            ))
+
+        if i == 0:
+            return self.present
+        if i == 1:
+            return self.speech
+        if i == 2:
+            return self.is_irregular
+        if i == 3:
+            return self.past
+        if i == 4:
+            return self.perfect
+        if i == 5:
+            return self.id
+        
+
+
+# %%
 DICTIONARY_PATHS = [
     "WordNet/index.adj",
     "WordNet/index.adv",
@@ -232,102 +279,120 @@ EXCEPTIONAL_DICTIONARY_PATH = "WordNet/exc"
 EDIT_DISTANCE_LIMIT = 12
 
 
-
-def load_dictionary():
+def load_dictionary() -> Dict[str, Tense]:
     # Load the structure.
-    n = 0
-    dictionary = {}
     full_lines = []
     files = DICTIONARY_PATHS
     for f in files:
         with open(f, "r") as fi:
-            for x in fi:
-                full_lines.append(x)
+            full_lines.extend(fi.readlines())
     words = [w.split()[0].replace("_", " ") for w in full_lines]
     tags = [t.split()[1] for t in full_lines]
     structure = np.array([words, tags]).T.tolist()
 
-
     # Load exceptional structures for verbs.
-    verbs = []
+    # NOTE: ["have", "had", "had"] is not contained in the dictionary.
     with open(EXCEPTIONAL_DICTIONARY_PATH, "r") as fi:
-        for x in fi:
-            verbs.append(x)
-    verbs = [w.split() for w in verbs]
-    for struct in structure:
-        if struct[1] == 'v':
-            for verb in verbs:
-                if struct[0] == verb[0]:
-                    if len(struct) < 3:
-                        struct.append('True')
-                        struct.append(verb[1])
-                        struct.append(verb[2])
-                    else:
-                        struct[2] = 'True'
-                        struct[3] = verb[1]
-                        struct[4] = verb[2]
+        verb_dict: Dict[List[str]] = dict([
+            (line.split()[0], line.split())
+            for line in fi.readlines() if line
+            ])
+
+    dictionary = {}
+    for lst in structure:
+
+        tense: Tense
+        if lst[1] == 'v':  # Verb
+            if lst[0] in verb_dict:
+                verb = verb_dict[lst[0]]
+                tense = Tense(
+                    verb[0],
+                    "v",
+                    True,
+                    verb[1],
+                    verb[2],
+                    None,
+                )
+            else:
+                tense = Tense(
+                    lst[0],
+                    "v",
+                    False,
+                    lst[3] if 2 < len(lst) else "",
+                    lst[4] if 2 < len(lst) else "",
+                    None,
+                )
         else:
-            if len(struct) < 3:
-                struct.append('False')
-                struct.append("")
-                struct.append("")
-        struct.append(n)
-        n = n + 1
-    for s in range(len(structure)):
-        dictionary[structure[s][0]] = structure[s]
+            tense = Tense(
+                lst[0],
+                lst[1],
+                False,
+                lst[3] if 2 < len(lst) else "",
+                lst[4] if 2 < len(lst) else "",
+                None,
+            )
+
+        assert(tense)
+        dictionary[tense.present] = tense
+    for d, item in enumerate(dictionary):
+        dictionary[item].id = d
     return dictionary
 
 
 ENGLISH_WORD_WITH_PARAMETER_DICTIONARY = load_dictionary()
 
-def complete_edit_distance(w, english_dictionary=ENGLISH_WORD_WITH_PARAMETER_DICTIONARY):
-    d = np.inf
-    wrd_ = None
-    if w not in english_dictionary:
-        for k, e in english_dictionary.items():
-            d_ = editdistance.eval(w, e[0])
-            if(d_ < d and d_ < EDIT_DISTANCE_LIMIT):
-                d = d_
-                wrd_ = k
-        if(wrd_ is not None):
-            return english_dictionary[wrd_][0]
-        else:
-            return wrd_
-    return w
+
+def complete_edit_distance(
+    word,
+    english_dictionary=ENGLISH_WORD_WITH_PARAMETER_DICTIONARY
+):
+    word = sym_spell.lookup(word, Verbosity.ALL)
+    try:
+        word = word[0].term
+    except:
+        word = ''
+    
+    if word in english_dictionary:
+        return word
+
+    min_dist = np.inf
+    nearest = None
+    for k, v in english_dictionary.items():
+        dist = editdistance.eval(word, v.present)
+        if(dist < min_dist and dist < EDIT_DISTANCE_LIMIT):
+            min_dist = dist
+            nearest = k
+    if nearest is None:
+        return None
+    return english_dictionary[nearest].present
+
 
 def proceed_problem2(
         sentence: Sentence,
         english_dictionary=ENGLISH_WORD_WITH_PARAMETER_DICTIONARY,
-) -> List[int]:
+) -> List[bool]:
     r"""Creation of a parse vector generated from the input.
-
     Arguments:
         sentence {Sentence} -- An English sentence from the web page tree
-
     Keyword Arguments:
         english_dictionary -- Dictionary of English words
             and their parameters, taken from open source libraries.
             (default: {ENGLISH_WORD_WITH_PARAMATER_DICTIONARY})
-
     Returns:
-        List[int] -- Vector :math:`v` as :math:`{-1, 1}
+        List[bool] -- Vector :math:`v` as :math:`{0, 1}
     """
 
-
-
     # Create an vector :math:`v` with 0's.
+    vec = [False for i in range(len(english_dictionary))]
 
-    vec = [-1 for i in range(len(english_dictionary))]
-    sentence = re.sub(r'[\'\"\[\]\(\)!+?=.,*\!]', ' ', sentence)
+    sentence = re.sub(f"[{string.punctuation}{string.digits}]", ' ', sentence)
     words = sentence.split()
-    for word in words:
+    non_empty_words = (w for w in words if w)
+    for word in non_empty_words:
+        # TODO: Use `word` as a key of the dictionary
         edited = complete_edit_distance(word, english_dictionary)
-        if edited in english_dictionary:
-            try:
-                print(english_dictionary[edited][5])
-            except:
-                print(english_dictionary[edited])
-            vec[english_dictionary[edited][5]] = 1
+        if edited is not None:
+            vec[english_dictionary[edited].id] = True
 
     # Match the index of tuple :math:`w` in :math:`D`,
     # replace :math:`v[i]` by 1.
@@ -335,31 +400,70 @@ def proceed_problem2(
 
 
 # %%
+KERNEL_FUNCTION = None
+PATH_TO_DATASET = 'News_Category_Dataset_v2_new.json'
+
+
+def load_dataset(path_to_dataset=PATH_TO_DATASET):
+    with open(path_to_dataset, "r") as file:
+        dataset = json.load(file)
+    return dataset
+
+
+NEWS_CATEGORY_DATASET = load_dataset()
+
+# %%
+FILENAME="model"
+def save_model(model, filename=FILENAME):
+    pickle.dump(model, open(filename, 'wb'))
+    
+def load_model(model, filename=FILENAME):
+    pickle.load(model, open(filename, 'rb'))
+
+
+# %%
 NEWS_CATEGORY_FILE = 'News_Category_Dataset_v2_new.json'
 KERNEL_FUNCTION = None
 BATCH_COUNT = 200
-
-def generate_dummy_data(count = BATCH_COUNT):
-    data = np.random.randint(low=0, high=2, size=(count, len(ENGLISH_WORD_WITH_PARAMETER_DICTIONARY)))
-    data = data * 2 - 1
-    return data
+#
+#def generate_dummy_data(count = BATCH_COUNT):
+#    data = np.random.randint(low=0, high=2, size=(count, len(ENGLISH_WORD_WITH_PARAMETER_DICTIONARY)))
+#    data = data * 2 - 1
+#    return data
 
 def train_svm(dataset=NEWS_CATEGORY_FILE, ratio_of_training_set=1):
-    for i in range(10):
-        print(i)
-        X = generate_dummy_data()
-        y = np.random.randint(low=0, high=len(NewsCategory), size=len(X))
-        model = svm.SGDClassifier()
-        model.partial_fit(X, y, classes=range(len(NewsCategory)))
+#    for i in range(10):
+#        print(i)
+#        X = generate_dummy_data()
+#        y = np.random.randint(low=0, high=len(NewsCategory), size=len(X))
+
 
 # Real code starts from here. Before is temporary code!
+    cat = []
+    with open(NEWS_CATEGORY_FILE) as file:
+        cat = json.load(file)
+    
+    for i in range(0, len(cat), BATCH_COUNT):
+        X = []
+        y = []
+        print("Iteration {}-{} starts.".format(i, i + BATCH_COUNT))
+        for c in cat[i:i + BATCH_COUNT]:
+            X.append(proceed_problem2(c['headline']))
+        for c in cat[i:i + BATCH_COUNT]:
+            y.append(NewsCategory[c['category']].value)
+            
+        X = np.asarray(X)
+        y = np.asarray(y)
+      
+        model = sklearn.linear_model.SGDClassifier()
+        model.partial_fit(X, y, classes=range(len(NewsCategory)))
 
-#    for c in cat:
-#        y.append(NewsCategory[c['category']].value)
+        if(i % 1000 == 0):
+            save_model(model, FILENAME + str(str(datetime.datetime.today()).replace(' ', '-')) + ".svm")
     
     return model
 #       
-#SVM = train_svm()
+SVM = train_svm()
 
 def proceed_problem3(
         V,
@@ -389,30 +493,23 @@ def proceed_problem3(
 
 
 def proceed_problem4(
-        C: List[NewsCategory],
+        C: List[int],
 ) -> str:
     r"""Get the maximum occurrence count of news categories
 
     Arguments:
-        C {List[NewsCategory]} -- List of every category :math:`c \in C`
+        C {List[int]} -- List of every category :math:`c \in C`
 
     Returns:
         str -- Category :math:`c` as string
     """
     # Count unique :math:`c` and return an array.
-    occurrence_counts = dict((c, 0) for c in NewsCategory)
-    for c in C:
-        occurrence_counts[c] += 1
-
-    # Select the maximum of the array.
-    c: NewsCategory = max(occurrence_counts, key=occurrence_counts.get)
-    return c.name
-
+    return NewsCategory(np.bincount(C).argmax() + 1).name
 # %%
 vec = np.random.randint(low=0, high=2, size=(5, len(ENGLISH_WORD_WITH_PARAMETER_DICTIONARY)))
 vec = vec * 2 - 1
-res = proceed_problem3(vec)
-print(NewsCategory(res + 1)) # The indexing issue of enums.
+#res = proceed_problem3(vec)
+#print(NewsCategory(res + 1)) # The indexing issue of enums.
 
 #vec_list = []
 #url = input("Give a URL to me: ") or "https://google.com"
