@@ -12,6 +12,7 @@ beautifulsoup4 = "*"
 # editdistance = "*"
 numpy = "*"
 sklearn = "*"
+symspellpy = "*"
 
 [requires]
 python_version = "3.8"
