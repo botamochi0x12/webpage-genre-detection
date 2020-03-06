@@ -364,7 +364,7 @@ def complete_edit_distance(
 def proceed_problem2(
         sentence: Sentence,
         english_dictionary=ENGLISH_WORD_WITH_PARAMETER_DICTIONARY,
-) -> List[bool]:
+) -> List[int]:
     r"""Creation of a parse vector generated from the input.
     Arguments:
         sentence {Sentence} -- An English sentence from the web page tree
@@ -373,11 +373,11 @@ def proceed_problem2(
             and their parameters, taken from open source libraries.
             (default: {ENGLISH_WORD_WITH_PARAMATER_DICTIONARY})
     Returns:
-        List[bool] -- Vector :math:`v` as :math:`{0, 1}
+        List[int] -- Vector :math:`v` as :math:`{-1, 1}
     """
 
     # Create an vector :math:`v` with 0's.
-    vec = [False for i in range(len(english_dictionary))]
+    vec = [-1 for i in range(len(english_dictionary))]
 
     sentence = re.sub(f"[{string.punctuation}{string.digits}]", ' ', sentence)
     words = sentence.split()
@@ -387,7 +387,7 @@ def proceed_problem2(
         edited = complete_edit_distance(word, english_dictionary)
 
         if edited:  # not (None or empty string)
-            vec[english_dictionary[edited].id] = True
+            vec[english_dictionary[edited].id] = 1
 
     # Match the index of tuple :math:`w` in :math:`D`,
     # replace :math:`v[i]` by 1.
