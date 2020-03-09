@@ -96,22 +96,28 @@ def scoop(
     delta_,
     gamma=GAMMA,
 ):
-    try:
-        unique_anchors = (
-            a for a in soup.find_all("a") if (a["href"].startswith('http') or a["href"].startswith('/')) and not is_duplicated(a["href"]))
-        unique_anchors = list(unique_anchors)[:gamma]
-    except:
-        return
     # Create new children not exceeding :math:`γ`.
     # From HTML script, get new URLs
-    for anchor in unique_anchors:
-        # TODO: Fix below since each `tree` is local
-        logger.debug(anchor["href"])
+    i_href = 0
+    for anchor in soup.find_all("a"):
+        # Apply until tree reaches depth :math:`δ`.
+        if gamma < i_href:
+            break
+
+        href = anchor["href"]
+
+        if is_duplicated(href):
+            continue
+
+        if not href.startswith('http') and not href.startswith('/'):
+            continue
+
+        logger.debug(href)
         try:
-            # Apply until tree reaches depth :math:`δ`.
             yield construct_tree_from(
-                    url=anchor["href"],
+                    url=href,
                     delta_=delta_-1, gamma=gamma)
+            i_href += 1
         except requests.exceptions.MissingSchema as ex:
             print(ex, file=sys.stderr)
         except requests.exceptions.InvalidSchema as ex:
