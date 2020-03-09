@@ -3,7 +3,7 @@ import dataclasses
 import datetime
 import enum
 import json
-import logging
+import logging as _logging
 import pickle
 import re
 import string
@@ -18,9 +18,15 @@ from bs4 import BeautifulSoup
 from sklearn.linear_model import SGDClassifier as SVM
 from symspellpy.symspellpy import SymSpell, Verbosity
 
-logging.basicConfig(filename=".log", level=logging.INFO)
-logger: logging.Logger = logging.getLogger("webpage_genre_detection")
-logger.addHandler(logging.StreamHandler(sys.stdout))
+logger: _logging.Logger = _logging.getLogger("webpage_genre_detection")
+handler_1 = _logging.StreamHandler(sys.stdout)
+handler_1.setLevel(_logging.DEBUG)
+logger.addHandler(handler_1)
+handler_2 = _logging.FileHandler("main.log")
+handler_2.setLevel(_logging.DEBUG)
+logger.addHandler(handler_2)
+logger.setLevel(_logging.DEBUG)
+logger.propagate = False
 
 sym_spell = SymSpell(2, 7)
 if not sym_spell.create_dictionary("frequency_dictionary_en_82_765.txt"):
@@ -71,6 +77,7 @@ def construct_tree_from(
 
     if(url.startswith('/')):
         url = URL_LIST[0] + url
+
     URL_LIST.append(url)
 
     # Create an empty tree :math:`T`.
