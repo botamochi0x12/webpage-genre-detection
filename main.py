@@ -255,25 +255,6 @@ class Tense:
     perfect: str
     id: int
 
-    def __getitem__(self, i: int):
-        logger.warning((
-            "The use of Tense[i] is deprecated. "
-            "Please call one of its properties. "
-            ))
-
-        if i == 0:
-            return self.present
-        if i == 1:
-            return self.speech
-        if i == 2:
-            return self.is_irregular
-        if i == 3:
-            return self.past
-        if i == 4:
-            return self.perfect
-        if i == 5:
-            return self.id
-
 
 # %%
 DICTIONARY_PATHS = [
