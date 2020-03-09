@@ -437,7 +437,7 @@ def train_svm(dataset=NEWS_CATEGORY_DATASET, ratio_of_training_set=1.0):
         if (i % 1000) == 0:
             save_model(
                 model,
-                "{}-{}_{}.svm".format(
+                "{}-{}_{}.svm.pickle".format(
                     BASE_FILEPATH,
                     i,
                     datetime.datetime.today().strftime(r"%Y%m%dT%H%M%S")
@@ -448,7 +448,7 @@ def train_svm(dataset=NEWS_CATEGORY_DATASET, ratio_of_training_set=1.0):
 
 
 try:
-    svm = load_model("model.svm")
+    svm = load_model("model.svm.pickle")
 except IOError:
     svm = train_svm()
 
