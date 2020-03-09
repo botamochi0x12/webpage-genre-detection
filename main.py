@@ -18,14 +18,13 @@ from bs4 import BeautifulSoup
 from sklearn.linear_model import SGDClassifier as SVM
 from symspellpy.symspellpy import SymSpell, Verbosity
 
-#logging.basicConfig(filename=".log", level=logging.ERROR)
-#logger: logging.Logger = logging.getLogger("webpage_genre_detection")
-#logger.addHandler(logging.StreamHandler(sys.stdout))
+logging.basicConfig(filename=".log", level=logging.INFO)
+logger: logging.Logger = logging.getLogger("webpage_genre_detection")
+logger.addHandler(logging.StreamHandler(sys.stdout))
 
 sym_spell = SymSpell(2, 7)
 if not sym_spell.create_dictionary("frequency_dictionary_en_82_765.txt"):
-    #logger.warning("Symspell isn't loaded!")
-    pass
+    logger.warning("Symspell isn't loaded!")
 
 uint = typing.NewType("unsigned_int", int)
 URL = typing.NewType("URL", str)
@@ -51,7 +50,7 @@ except OSError as ex:
 # %%
 DELTA = 2
 GAMMA = 3
-SIGMA = 20
+SIGMA = 100
 
 # NOTE:
 # * List instances are mutable
@@ -107,8 +106,7 @@ def scoop(
     # From HTML script, get new URLs
     for anchor in unique_anchors:
         # TODO: Fix below since each `tree` is local
-#        logger.debug(anchor["href"])
-        print(anchor['href'])
+        logger.debug(anchor["href"])
         try:
             # Apply until tree reaches depth :math:`δ`.
             yield construct_tree_from(
@@ -203,11 +201,7 @@ def flatten(nodes, *, sigma=SIGMA, on_demand=False) -> List[Sentence]:
         # and derive maximum :math:`σ` sentences.
         # Add each sentence :math:`s` into :math:`\mathcal{X}`.
         sentences = list(parsed(soup, sigma=sigma))
-#        logger.debug({
-#            "url": url,
-#            "content": sentences,
-#        })
-        print({
+        logger.debug({
             "url": url,
             "content": sentences,
         })
@@ -256,10 +250,10 @@ class Tense:
     id: int
 
     def __getitem__(self, i: int):
-#        logger.warning((
-#            "The use of Tense[i] is deprecated. "
-#            "Please call one of its properties. "
-#            ))
+        logger.warning((
+            "The use of Tense[i] is deprecated. "
+            "Please call one of its properties. "
+            ))
 
         if i == 0:
             return self.present
@@ -434,7 +428,7 @@ def train_svm(dataset=NEWS_CATEGORY_DATASET, ratio_of_training_set=1.0):
     for i in range(0, len(dataset), BATCH_COUNT):
         X = []
         y = []
-#        logger.debug("Iteration {}-{} starts.".format(i, i + BATCH_COUNT))
+        logger.debug("Iteration {}-{} starts.".format(i, i + BATCH_COUNT))
 
         for c in dataset[i:i + BATCH_COUNT]:
             X.append(proceed_problem2(c['headline']))
@@ -505,42 +499,15 @@ def proceed_problem4(
 
 
 # %%
-    
-for i in range(0, len(NEWS_CATEGORY_DATASET), BATCH_COUNT):
-    X = []
-    y = []
-#        logger.debug("Iteration {}-{} starts.".format(i, i + BATCH_COUNT))
-    t = 0
-    for c in NEWS_CATEGORY_DATASET[i:i + BATCH_COUNT]:
-        X.append(proceed_problem2(c['headline']))
-        y.append(NewsCategory[c['category']].value)
-
-    X = np.asarray(X)
-    y = np.asarray(y)
-
-    # ? can a stochastic gradient decend model train itself
-    for x, y_ in zip(X, y):
-        x = np.asarray([x])
-        res = svm.predict(x)
-        print(NewsCategory(res).name, " | ", NewsCategory(y_).name)
-        if(res == y_):
-            t = t + 1
-    print(t / BATCH_COUNT)
-
-
-
-#if __name__ == "__main__":
-#    categories = []
-#    for i in range(1):
-#        vec_list = []
-#        url = input("Give a URL to me: ") or "https://buzzfeed.com"
-#        #sentences = proceed_problem1(url)
-#        sentences = ["Split array several arrays defined boundaries, python"]
-#        for i in range(0, len(sentences), SIGMA):
-#            for sentence in sentences[i: i + SIGMA]:
-#                vec_list.append(proceed_problem2(sentence))
-#            c = proceed_problem3(vec_list)
-#            categories.append(c)
-#    representative_category = proceed_problem4(categories)
-#    print(representative_category)
-##    logger.debug(representative_category)
+if __name__ == "__main__":
+    categories = []
+    for i in range(1):
+        vec_list = []
+        url = input("Give a URL to me: ") or "https://buzzfeed.com"
+        sentences = proceed_problem1(url)
+        for sentence in sentences:
+            vec_list.append(proceed_problem2(sentence))
+        c = proceed_problem3(vec_list)
+        categories.append(c)
+    representative_category = proceed_problem4(categories)
+    logger.debug(representative_category)
