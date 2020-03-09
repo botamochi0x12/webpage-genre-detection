@@ -453,11 +453,11 @@ def train_svm(dataset=NEWS_CATEGORY_DATASET, ratio_of_training_set=1.0):
     return model
 
 
-#svm = train_svm()
 try:
-    svm
-except NameError:
     svm = load_model("model.svm")
+except IOError:
+    svm = train_svm()
+
 
 def proceed_problem3(
         V,
