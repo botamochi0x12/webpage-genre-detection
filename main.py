@@ -474,9 +474,8 @@ def proceed_problem3(
 
     return np.bincount(C).argmax()
 
+
 # %%
-
-
 def proceed_problem4(
         C: List[int],
 ) -> str:
@@ -493,7 +492,7 @@ def proceed_problem4(
 
 
 # %%
-if __name__ == "__main__":
+def main():
     categories = []
     for i in range(1):
         vec_list = []
@@ -505,3 +504,7 @@ if __name__ == "__main__":
         categories.append(c)
     representative_category = proceed_problem4(categories)
     logger.debug(representative_category)
+
+
+if __name__ == "__main__":
+    main()
