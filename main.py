@@ -18,15 +18,19 @@ from bs4 import BeautifulSoup
 from sklearn.linear_model import SGDClassifier as SVM
 from symspellpy.symspellpy import SymSpell, Verbosity
 
-logger: _logging.Logger = _logging.getLogger("webpage_genre_detection")
-handler_1 = _logging.StreamHandler(sys.stdout)
-handler_1.setLevel(_logging.DEBUG)
-logger.addHandler(handler_1)
-handler_2 = _logging.FileHandler("main.log")
-handler_2.setLevel(_logging.DEBUG)
-logger.addHandler(handler_2)
-logger.setLevel(_logging.DEBUG)
-logger.propagate = False
+# Define `logger` only once
+try:
+    logger
+except NameError:
+    logger: _logging.Logger = _logging.getLogger("webpage_genre_detection")
+    handler_1 = _logging.StreamHandler(sys.stdout)
+    handler_1.setLevel(_logging.DEBUG)
+    logger.addHandler(handler_1)
+    handler_2 = _logging.FileHandler("debug.log")
+    handler_2.setLevel(_logging.DEBUG)
+    logger.addHandler(handler_2)
+    logger.setLevel(_logging.DEBUG)
+    logger.propagate = False
 
 sym_spell = SymSpell(2, 7)
 if not sym_spell.create_dictionary("frequency_dictionary_en_82_765.txt"):
