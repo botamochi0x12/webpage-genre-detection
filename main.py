@@ -28,7 +28,7 @@ except NameError:
     handler_1 = _logging.StreamHandler(sys.stdout)
     handler_1.setLevel(_logging.DEBUG)
     logger.addHandler(handler_1)
-    handler_2 = _logging.FileHandler("debug.log")
+    handler_2 = _logging.FileHandler("debug.log", encoding="utf-8")
     handler_2.setLevel(_logging.DEBUG)
     logger.addHandler(handler_2)
     logger.setLevel(_logging.DEBUG)
@@ -287,7 +287,17 @@ DICTIONARY_PATHS = [
     ]
 EXCEPTIONAL_DICTIONARY_PATH = "WordNet/exc"
 EDIT_DISTANCE_LIMIT = 12
-STOPWORDS = set(stopwords.words('english'))
+
+try:
+    stopwords.words
+except LookupError as ex:
+    logger.warning(ex)
+    logger.warning("Downloading `stopwords`...")
+    import nltk
+    nltk.download("stopwords")
+    del nltk
+finally:
+    STOPWORDS = set(stopwords.words('english'))
 
 
 def load_dictionary() -> Dict[str, Tense]:
