@@ -9,7 +9,6 @@ flake8 = "*"
 [packages]
 requests = "*"
 beautifulsoup4 = "*"
-# editdistance = "*"
 numpy = "*"
 sklearn = "*"
 symspellpy = "*"
