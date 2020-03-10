@@ -458,6 +458,7 @@ def train_svm(
         *,
         verbose=1,
         period_storing_model=PERIOD_STORING_MODE,
+        checking_accuracy=True,
 ):
 
     model: SVM = SVM(tol=0.0001, verbose=verbose, loss='log')
@@ -466,7 +467,6 @@ def train_svm(
         for j in range(0, len(dataset), BATCH_COUNT):
             X = []
             y = []
-            t = 0
 
             for c in dataset[j:j + BATCH_COUNT]:
                 X.append(proceed_problem2(c['headline']))
@@ -479,13 +479,8 @@ def train_svm(
 
             model.partial_fit(X, y, classes=range(1, len(NewsCategory) + 1))
 
-            for x, y_ in zip(X, y):
-                x = np.asarray([x])
-                res = model.predict(x)
-                if(res == y_):
-                    t = t + 1
-
-            logger.debug(f"Accuracy on this round: {t / BATCH_COUNT}")
+            if checking_accuracy:
+                logger.debug(f"Accuracy on this round: {svm.score(X, y)}")
 
             if (j % period_storing_model) == 0:
                 today = datetime.datetime.today().strftime(r"%Y%m%dT%H%M%S")
