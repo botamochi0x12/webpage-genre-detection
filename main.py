@@ -399,10 +399,11 @@ def proceed_problem2(
             and their parameters, taken from open source libraries.
             (default: {ENGLISH_WORD_WITH_PARAMATER_DICTIONARY})
     Returns:
-        List[int] -- Vector :math:`v` as :math:`{-1, 1}
+        List[int] -- Vector :math:`v` as :math:`{0, 1}
     """
 
     # Create an vector :math:`v` with 0's.
+    # TODO: Initiate `vec` as `ndarray`
     vec = [0 for i in range(len(english_dictionary))]
 
     sentence = re.sub(f"[{string.punctuation}{string.digits}]", ' ', sentence)
@@ -425,7 +426,8 @@ PATH_TO_DATASET = 'News_Category_Dataset_v2_new.json'
 BATCH_COUNT = 200
 
 
-def load_dataset(path_to_dataset=PATH_TO_DATASET):
+def load_dataset(path_to_dataset=PATH_TO_DATASET) -> List[Dict[str, str]]:
+    # TODO: Check the type of `dataset`
     with open(path_to_dataset, "r") as file:
         dataset = json.load(file)
     return dataset
@@ -442,9 +444,13 @@ def save_model(model, filepath):
         pickle.dump(model, f)
 
 
-def load_model(filepath):
+def load_model(filepath) -> SVM:
     with open(filepath, 'rb') as f:
-        return pickle.load(f)
+        model = pickle.load(f)
+    if isinstance(model, SVM):
+        return model
+    raise TypeError(
+        f"The loaded object is not a {SVM}. type: {type(model)}")
 
 
 RATIO_OF_TRAINING_SET = 1.0
@@ -459,12 +465,13 @@ def train_svm(
         verbose=1,
         period_storing_model=PERIOD_STORING_MODE,
         checking_accuracy=True,
-):
+) -> SVM:
 
     model: SVM = SVM(tol=0.0001, verbose=verbose, loss='log')
     for i in range(N_EPOCHS):
         random.shuffle(dataset)
         for j in range(0, len(dataset), BATCH_COUNT):
+            # TODO: Initialize `X` and `y` as `ndarray`
             X = []
             y = []
 
@@ -503,7 +510,7 @@ def proceed_problem3(
     r"""Classification of SVM
 
     Arguments:
-        V {List[List[bool]]} -- Set of every vector :math:` v \in V`
+        V {2d_array_like} -- Set of every vector :math:` v \in V`
 
     Keyword Arguments:
         m {SVM} -- A model of Support Vector Machine (default: {svm})
@@ -520,12 +527,12 @@ def proceed_problem3(
 
 # %%
 def proceed_problem4(
-        C: List[int],
+        C,
 ) -> str:
     r"""Get the maximum occurrence count of news categories
 
     Arguments:
-        C {List[int]} -- List of every category :math:`c \in C`
+        C {1d_array_like} -- List of every category :math:`c \in C`
 
     Returns:
         str -- Category :math:`c`
@@ -536,8 +543,9 @@ def proceed_problem4(
 
 # %%
 def main():
+    N_URLS = 1
     categories = []
-    for _ in range(1):
+    for _ in range(N_URLS):
         vec_list = []
         url = input("Give a URL to me: ") or "https://buzzfeed.com"
         sentences = proceed_problem1(url)
