@@ -3,6 +3,8 @@ import dataclasses
 import datetime
 import enum
 import json
+import random
+from nltk.corpus import stopwords
 import logging as _logging
 import pickle
 import re
@@ -276,7 +278,7 @@ DICTIONARY_PATHS = [
     ]
 EXCEPTIONAL_DICTIONARY_PATH = "WordNet/exc"
 EDIT_DISTANCE_LIMIT = 12
-
+STOPWORDS = set(stopwords.words('english'))
 
 def load_dictionary() -> Dict[str, Tense]:
     # Load the structure.
@@ -340,8 +342,10 @@ def load_dictionary() -> Dict[str, Tense]:
 
     return dictionary
 
-
-ENGLISH_WORD_WITH_PARAMETER_DICTIONARY = load_dictionary()
+try:
+    ENGLISH_WORD_WITH_PARAMETER_DICTIONARY
+except NameError:
+    ENGLISH_WORD_WITH_PARAMETER_DICTIONARY = load_dictionary()
 
 
 def complete_edit_distance(
@@ -378,11 +382,12 @@ def proceed_problem2(
     """
 
     # Create an vector :math:`v` with 0's.
-    vec = [-1 for i in range(len(english_dictionary))]
-
+    vec = [0 for i in range(len(english_dictionary))]
+    
     sentence = re.sub(f"[{string.punctuation}{string.digits}]", ' ', sentence)
     words = sentence.split()
     non_empty_words = (w for w in words if w)
+    non_empty_words = [w for w in non_empty_words if not w in STOPWORDS] 
     for word in non_empty_words:
         # TODO: Use `word` as a key of the dictionary
         edited = complete_edit_distance(word, english_dictionary)
@@ -406,8 +411,10 @@ def load_dataset(path_to_dataset=PATH_TO_DATASET):
         dataset = json.load(file)
     return dataset
 
-
-NEWS_CATEGORY_DATASET = load_dataset()
+try:
+    NEWS_CATEGORY_DATASET
+except NameError:
+    NEWS_CATEGORY_DATASET = load_dataset()
 
 
 def save_model(model, filepath):
@@ -422,31 +429,42 @@ def load_model(filepath):
 
 def train_svm(dataset=NEWS_CATEGORY_DATASET, ratio_of_training_set=1.0):
 
-    model: SVM = SVM()
-    for i in range(0, len(dataset), BATCH_COUNT):
-        X = []
-        y = []
-        logger.debug("Iteration {}-{} starts.".format(i, i + BATCH_COUNT))
-
-        for c in dataset[i:i + BATCH_COUNT]:
-            X.append(proceed_problem2(c['headline']))
-            y.append(NewsCategory[c['category']].value - 1)
-
-        X = np.asarray(X)
-        y = np.asarray(y)
-
-        # ? can a stochastic gradient decend model train itself
-        model.partial_fit(X, y, classes=range(len(NewsCategory)))
-
-        if (i % 1000) == 0:
-            save_model(
-                model,
-                "{}-{}_{}.svm.pickle".format(
-                    BASE_FILEPATH,
-                    i,
-                    datetime.datetime.today().strftime(r"%Y%m%dT%H%M%S")
+    model: SVM = SVM(tol=0.0001, verbose=1, loss='log')
+    for i in range(5):
+        random.shuffle(dataset)
+        for j in range(0, len(dataset), BATCH_COUNT):
+            X = []
+            y = []
+            t = 0
+    
+            logger.debug("Iteration {} starts.".format(j+1))
+            
+            for c in dataset[j:j+BATCH_COUNT]:
+                X.append(proceed_problem2(c['headline']))
+                y.append(NewsCategory[c['category']].value)
+    
+            X = np.asarray(X)
+            y = np.asarray(y)
+    
+            # ? can a stochastic gradient descend model train itself
+            model.partial_fit(X, y, classes=range(1, len(NewsCategory)+1))
+                    
+            for x, y_ in zip(X, y):
+                x = np.asarray([x])
+                res = model.predict(x)
+                if(res == y_):
+                    t = t + 1
+            print("Accuracy this round: " + str(t / BATCH_COUNT))
+    
+            if (j % 1000) == 0:
+                save_model(
+                    model,
+                    "{}-{}_{}.svm.pickle".format(
+                        BASE_FILEPATH,
+                        j,
+                        datetime.datetime.today().strftime(r"%Y%m%dT%H%M%S")
+                        )
                     )
-                )
 
     return model
 
@@ -492,7 +510,7 @@ def proceed_problem4(
         str -- Category :math:`c`
     """
     # Count unique :math:`c` and return an array.
-    return NewsCategory(np.bincount(C).argmax() + 1).name
+    return NewsCategory(np.bincount(C).argmax()).name
 
 
 # %%

@@ -128,5 +128,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# pickle files for SVG model
+# pickle files for SVM model
 *.svm
+*.svm.pickle
