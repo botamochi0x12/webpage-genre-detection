@@ -11,7 +11,7 @@ import string
 import sys
 import typing
 from typing import Dict, List
-from urllib.parse import splitquery
+from urllib.parse import splitquery, urljoin
 
 import numpy as np
 import requests
@@ -84,12 +84,10 @@ def construct_tree_from(
     # Check if starting with `http` or `https`
     # NOTE: After below, InvalidSchema and/or MissingSchema mustn't happen?
     if not url.startswith("http"):
-        if url.startswith("//"):
-            # NOTE: Hosts may replace `http` to `https`
-            url = "http:" + url
-            assert url.startswith("http://"), f"`{url}` isn't valid as a URL"
-        elif url.startswith("/"):  # relative path
-            url = URL_LIST[0] + url
+        if url.startswith("/"):  # `/` or `//`
+            # FIXME: `URL_LIST[-1]` may not be the same host as the current
+            base_url = URL_LIST[-1]
+            url = urljoin(base_url, url)
         else:
             return {"data": {"url": None, "content": None}, "nodes": None}
 
