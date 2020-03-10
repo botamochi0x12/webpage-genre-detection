@@ -68,11 +68,11 @@ SIGMA = 100
 # * List instances are mutable
 # * Once `URL_LIST` is changed, it does never auto-reset.
 #     So, please assign it an empty list manually.
-URL_LIST = []
+URL_LIST: List[URL] = []
 
 
 def construct_tree_from(
-    url,
+    url: URL,
     *,
     delta_,
     gamma=GAMMA,
@@ -81,8 +81,17 @@ def construct_tree_from(
         raise ValueError(
             f"Max. depth must be positive. (delta_ as depth < {delta_})")
 
-    if(url.startswith('/')):
-        url = URL_LIST[0] + url
+    # Check if starting with `http` or `https`
+    # NOTE: After below, InvalidSchema and/or MissingSchema mustn't happen?
+    if not url.startswith("http"):
+        if url.startswith("//"):
+            # NOTE: Hosts may replace `http` to `https`
+            url = "http:" + url
+            assert url.startswith("http://"), f"`{url}` isn't valid as a URL"
+        elif url.startswith("/"):  # relative path
+            url = URL_LIST[0] + url
+        else:
+            return {"data": {"url": None, "content": None}, "nodes": None}
 
     URL_LIST.append(url)
 
@@ -196,7 +205,7 @@ def traversed(tree: dict) -> list:
 
 
 def parsed(soup: BeautifulSoup, *, sigma=SIGMA):
-    # TODO: Fix the problem caused by parsing "Prof." "Dr." and so on.
+    # FIXME: Fix the problem caused by parsing "Prof." "Dr." and so on.
     regex = re.compile(r"\!|\?|\.")
 
     paragraphs = soup.find_all("p", limit=sigma)
@@ -343,6 +352,7 @@ def load_dictionary() -> Dict[str, Tense]:
 
     return dictionary
 
+
 try:
     ENGLISH_WORD_WITH_PARAMETER_DICTIONARY
 except NameError:
@@ -409,6 +419,7 @@ def load_dataset(path_to_dataset=PATH_TO_DATASET):
     with open(path_to_dataset, "r") as file:
         dataset = json.load(file)
     return dataset
+
 
 try:
     NEWS_CATEGORY_DATASET
