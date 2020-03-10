@@ -3,10 +3,9 @@ import dataclasses
 import datetime
 import enum
 import json
-import random
-from nltk.corpus import stopwords
 import logging as _logging
 import pickle
+import random
 import re
 import string
 import sys
@@ -17,6 +16,7 @@ from urllib.parse import splitquery
 import numpy as np
 import requests
 from bs4 import BeautifulSoup
+from nltk.corpus import stopwords
 from sklearn.linear_model import SGDClassifier as SVM
 from symspellpy.symspellpy import SymSpell, Verbosity
 
@@ -280,6 +280,7 @@ EXCEPTIONAL_DICTIONARY_PATH = "WordNet/exc"
 EDIT_DISTANCE_LIMIT = 12
 STOPWORDS = set(stopwords.words('english'))
 
+
 def load_dictionary() -> Dict[str, Tense]:
     # Load the structure.
     full_lines = []
@@ -383,11 +384,10 @@ def proceed_problem2(
 
     # Create an vector :math:`v` with 0's.
     vec = [0 for i in range(len(english_dictionary))]
-    
+
     sentence = re.sub(f"[{string.punctuation}{string.digits}]", ' ', sentence)
     words = sentence.split()
-    non_empty_words = (w for w in words if w)
-    non_empty_words = [w for w in non_empty_words if not w in STOPWORDS] 
+    non_empty_words = (w for w in words if w and w not in STOPWORDS)
     for word in non_empty_words:
         # TODO: Use `word` as a key of the dictionary
         edited = complete_edit_distance(word, english_dictionary)
@@ -402,7 +402,6 @@ def proceed_problem2(
 
 # %%
 PATH_TO_DATASET = 'News_Category_Dataset_v2_new.json'
-BASE_FILEPATH = "model"
 BATCH_COUNT = 200
 
 
@@ -427,40 +426,51 @@ def load_model(filepath):
         return pickle.load(f)
 
 
-def train_svm(dataset=NEWS_CATEGORY_DATASET, ratio_of_training_set=1.0):
+RATIO_OF_TRAINING_SET = 1.0
+N_EPOCHS = 5
+PERIOD_STORING_MODE = 1000
 
-    model: SVM = SVM(tol=0.0001, verbose=1, loss='log')
-    for i in range(5):
+
+def train_svm(
+        dataset=NEWS_CATEGORY_DATASET,
+        *,
+        verbose=1,
+        period_storing_model=PERIOD_STORING_MODE,
+):
+
+    model: SVM = SVM(tol=0.0001, verbose=verbose, loss='log')
+    for i in range(N_EPOCHS):
         random.shuffle(dataset)
         for j in range(0, len(dataset), BATCH_COUNT):
             X = []
             y = []
             t = 0
-    
-            logger.debug("Iteration {} starts.".format(j+1))
-            
-            for c in dataset[j:j+BATCH_COUNT]:
+
+            for c in dataset[j:j + BATCH_COUNT]:
                 X.append(proceed_problem2(c['headline']))
                 y.append(NewsCategory[c['category']].value)
-    
+
             X = np.asarray(X)
             y = np.asarray(y)
-    
+
+            logger.debug(f"Iteration {j + 1} starts.")
+
             # ? can a stochastic gradient descend model train itself
-            model.partial_fit(X, y, classes=range(1, len(NewsCategory)+1))
-                    
+            model.partial_fit(X, y, classes=range(1, len(NewsCategory) + 1))
+
             for x, y_ in zip(X, y):
                 x = np.asarray([x])
                 res = model.predict(x)
                 if(res == y_):
                     t = t + 1
-            print("Accuracy this round: " + str(t / BATCH_COUNT))
-    
-            if (j % 1000) == 0:
+
+            logger.debug(f"Accuracy this round: {t / BATCH_COUNT}")
+
+            if (j % period_storing_model) == 0:
                 save_model(
                     model,
                     "{}-{}_{}.svm.pickle".format(
-                        BASE_FILEPATH,
+                        "model",
                         j,
                         datetime.datetime.today().strftime(r"%Y%m%dT%H%M%S")
                         )
@@ -516,7 +526,7 @@ def proceed_problem4(
 # %%
 def main():
     categories = []
-    for i in range(1):
+    for _ in range(1):
         vec_list = []
         url = input("Give a URL to me: ") or "https://buzzfeed.com"
         sentences = proceed_problem1(url)
