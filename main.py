@@ -440,6 +440,7 @@ def load_model(filepath):
 RATIO_OF_TRAINING_SET = 1.0
 N_EPOCHS = 5
 PERIOD_STORING_MODE = 1000
+MODEL_FILE_EXTENSION = "svm.pickle"
 
 
 def train_svm(
@@ -466,7 +467,6 @@ def train_svm(
 
             logger.debug(f"Iteration {j + 1} starts.")
 
-            # ? can a stochastic gradient descend model train itself
             model.partial_fit(X, y, classes=range(1, len(NewsCategory) + 1))
 
             for x, y_ in zip(X, y):
@@ -475,23 +475,17 @@ def train_svm(
                 if(res == y_):
                     t = t + 1
 
-            logger.debug(f"Accuracy this round: {t / BATCH_COUNT}")
+            logger.debug(f"Accuracy on this round: {t / BATCH_COUNT}")
 
             if (j % period_storing_model) == 0:
-                save_model(
-                    model,
-                    "{}-{}_{}.svm.pickle".format(
-                        "model",
-                        j,
-                        datetime.datetime.today().strftime(r"%Y%m%dT%H%M%S")
-                        )
-                    )
+                today = datetime.datetime.today().strftime(r"%Y%m%dT%H%M%S")
+                save_model(model, f"model-{j}_{today}.{MODEL_FILE_EXTENSION}")
 
     return model
 
 
 try:
-    svm = load_model("model.svm.pickle")
+    svm = load_model(f"model.{MODEL_FILE_EXTENSION}")
 except IOError:
     svm = train_svm()
 
