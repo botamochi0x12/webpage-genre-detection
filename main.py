@@ -42,7 +42,6 @@ uint = typing.NewType("unsigned_int", int)
 URL = typing.NewType("URL", str)
 Sentence = typing.NewType("Sentence", str)
 
-NewsCategory = enum.Enum("NewsCategory", "Default")
 try:
     NewsCategory = enum.Enum(
         "NewsCategory",
@@ -57,7 +56,8 @@ try:
             )
         )
 except OSError as ex:
-    print(ex, file=sys.stderr)
+    logger.error(ex)
+    raise ex
 
 # %%
 DELTA = 2
@@ -141,11 +141,11 @@ def scoop(
                     delta_=delta_-1, gamma=gamma)
             i_href += 1
         except requests.exceptions.MissingSchema as ex:
-            print(ex, file=sys.stderr)
+            logger.error(ex)
         except requests.exceptions.InvalidSchema as ex:
-            print(ex, file=sys.stderr)
+            logger.error(ex)
         except requests.HTTPError as ex:
-            print(ex, file=sys.stderr)
+            logger.error(ex)
 
 
 def is_duplicated(url, *, tree=None, url_list=URL_LIST, allowing_query=False):
@@ -487,6 +487,7 @@ def train_svm(
 try:
     svm = load_model(f"model.{MODEL_FILE_EXTENSION}")
 except IOError:
+    logger.warning("Start training model because of not found model.svm.pickle")
     svm = train_svm()
 
 

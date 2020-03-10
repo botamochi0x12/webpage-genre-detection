@@ -1,3 +1,4 @@
+# %%
 from main import (
     proceed_problem1,
     proceed_problem2,
@@ -29,3 +30,6 @@ if __name__ == "__main__":
                 t = t + 1
 
         print(t / BATCH_COUNT)
+
+
+# %%
