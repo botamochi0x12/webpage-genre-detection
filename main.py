@@ -540,7 +540,9 @@ def train_svm(
 
     model: SVM = SVM(tol=0.0001, verbose=verbose, loss='log')
     for i in range(N_EPOCHS):
+        logger.debug(f"The training epoch {i + 1} starts.")
         random.shuffle(dataset)
+
         for j in range(0, len(dataset), BATCH_COUNT):
             # TODO: Initialize `X` and `y` as `ndarray`
             X = []
@@ -553,16 +555,26 @@ def train_svm(
             X = np.asarray(X)
             y = np.asarray(y)
 
-            logger.debug(f"Iteration {j + 1} starts.")
-
+            logger.debug(f"The training iteration {j + 1} starts.")
             model.partial_fit(X, y, classes=range(1, len(NewsCategory) + 1))
+            logger.debug(f"The training iteration {j + 1} ended.")
 
             if checking_accuracy:
                 logger.debug(f"Accuracy on this round: {model.score(X, y)}")
 
             if (j % period_storing_model) == 0:
                 today = datetime.datetime.today().strftime(r"%Y%m%dT%H%M%S")
-                save_model(model, f"model-{j}_{today}.{MODEL_FILE_EXTENSION}")
+                save_model(
+                    model, f"model_e{i}-i{j}_{today}.{MODEL_FILE_EXTENSION}")
+                logger.debug("A model was saved successfully.")
+
+        today = datetime.datetime.today().strftime(r"%Y%m%dT%H%M%S")
+        save_model(model, f"model_e{i}_{today}.{MODEL_FILE_EXTENSION}")
+        logger.debug("A model was saved successfully.")
+
+        logger.debug(f"The training epoch {i + 1} ended.")
+
+    logger.debug("A model training accomplished")
 
     return model
 
@@ -570,7 +582,12 @@ def train_svm(
 try:
     svm = load_model(f"model.{MODEL_FILE_EXTENSION}")
 except IOError:
-    logger.warning("Start training model because of not found model.svm.pickle")
+    logger.warning(
+            (
+                "Start training model "
+                f"because of not found model.{MODEL_FILE_EXTENSION}"
+            )
+        )
     svm = train_svm()
 
 
