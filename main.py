@@ -451,31 +451,42 @@ def load_model(filepath) -> SVM:
         f"The loaded object is not a {SVM}. type: {type(model)}")
 
 
-RATIO_OF_TRAINING_SET = 1.0
 N_EPOCHS = 5
 N_GROUPS = 12
 K_FOLDS = 3
 SAMPLE_RATIO = 10
-PERIOD_STORING_MODE = 1000
-MODEL_FILE_EXTENSION = "svm.pickle"
 
-def cross_validation(dataset=NEWS_CATEGORY_DATASET, sample_ratio = SAMPLE_RATIO, verbose=1, n = N_GROUPS, k = K_FOLDS):
+
+def cross_validation(
+        dataset=NEWS_CATEGORY_DATASET,
+        sample_ratio=SAMPLE_RATIO,
+        verbose=1,
+        n=N_GROUPS,
+        k=K_FOLDS,
+):
+
     model: SVM = SVM(tol=0.0001, verbose=verbose, loss='log')
-    
+
     random.shuffle(dataset)
-    dataset = dataset[:int(len(dataset)/ sample_ratio)]
-    part_size = int(len(dataset)/ n)
-    cluster_size = int(n / k)
+    dataset = dataset[:(len(dataset) // sample_ratio)]
+    part_size = len(dataset) // n
+    cluster_size = n // k
 
     for i in range(k):
+
         logger.debug(f"Clustering {i} starts.")
-        dataset_train = dataset[i * part_size : i * part_size + cluster_size * part_size]
-        dataset_test  = [x for x in dataset if x not in dataset_train]
+
+        dataset_train = dataset[
+            i * part_size: i * part_size + cluster_size * part_size]
+        dataset_test = [x for x in dataset if x not in dataset_train]
+
+        logger.debug("The train part starts...")
+
         for j in range(0, len(dataset_train), BATCH_COUNT):
             # TODO: Initialize `X` and `y` as `ndarray`
             X = []
             y = []
-            
+
             for c in dataset_train[j:j + BATCH_COUNT]:
                 X.append(proceed_problem2(c['headline']))
                 y.append(NewsCategory[c['category']].value)
@@ -483,23 +494,41 @@ def cross_validation(dataset=NEWS_CATEGORY_DATASET, sample_ratio = SAMPLE_RATIO,
             X = np.asarray(X)
             y = np.asarray(y)
 
-
-            logger.debug(f"Iteration {j + 1} starts.")
-
+            logger.debug(f"The {j + 1}(st|nd|rd|th) train iteration starts.")
             model.partial_fit(X, y, classes=range(1, len(NewsCategory) + 1))
-        for j in range(0, len(dataset_test), BATCH_COUNT):   
+
+        logger.debug("The train part ended.")
+
+        logger.debug("The test part starts...")
+
+        scores = []
+        for j in range(0, len(dataset_test), BATCH_COUNT):
             X_test = []
             y_test = []
-            scores = []
             for c in dataset_test[j: j + BATCH_COUNT]:
                 X_test.append(proceed_problem2(c['headline']))
-                y_test.append(NewsCategory[c['category']].value)   
-            
+                y_test.append(NewsCategory[c['category']].value)
+
             X_test = np.asarray(X_test)
             y_test = np.asarray(y_test)
+
+            logger.debug(f"The {j + 1}(st|nd|rd|th) test iteration starts.")
             scores.append(model.score(X_test, y_test))
-        np.average(scores)
-        logger.debug(f"The total score is {scores}.")
+
+        ave_score = np.average(scores)
+        logger.debug(f"The total score is {ave_score}.")
+
+        logger.debug("The test part ended.")
+
+
+# TODO: Move `cross_validation` to another file
+# cross_validation()
+
+
+RATIO_OF_TRAINING_SET = 1.0
+PERIOD_STORING_MODE = 1000
+MODEL_FILE_EXTENSION = "svm.pickle"
+
 
 def train_svm(
         dataset=NEWS_CATEGORY_DATASET,
@@ -537,7 +566,6 @@ def train_svm(
 
     return model
 
-cross_validation()
 
 try:
     svm = load_model(f"model.{MODEL_FILE_EXTENSION}")
