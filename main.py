@@ -453,9 +453,53 @@ def load_model(filepath) -> SVM:
 
 RATIO_OF_TRAINING_SET = 1.0
 N_EPOCHS = 5
+N_GROUPS = 12
+K_FOLDS = 3
+SAMPLE_RATIO = 10
 PERIOD_STORING_MODE = 1000
 MODEL_FILE_EXTENSION = "svm.pickle"
 
+def cross_validation(dataset=NEWS_CATEGORY_DATASET, sample_ratio = SAMPLE_RATIO, verbose=1, n = N_GROUPS, k = K_FOLDS):
+    model: SVM = SVM(tol=0.0001, verbose=verbose, loss='log')
+    
+    random.shuffle(dataset)
+    dataset = dataset[:int(len(dataset)/ sample_ratio)]
+    part_size = int(len(dataset)/ n)
+    cluster_size = int(n / k)
+
+    for i in range(k):
+        logger.debug(f"Clustering {i} starts.")
+        dataset_train = dataset[i * part_size : i * part_size + cluster_size * part_size]
+        dataset_test  = [x for x in dataset if x not in dataset_train]
+        for j in range(0, len(dataset_train), BATCH_COUNT):
+            # TODO: Initialize `X` and `y` as `ndarray`
+            X = []
+            y = []
+            
+            for c in dataset_train[j:j + BATCH_COUNT]:
+                X.append(proceed_problem2(c['headline']))
+                y.append(NewsCategory[c['category']].value)
+
+            X = np.asarray(X)
+            y = np.asarray(y)
+
+
+            logger.debug(f"Iteration {j + 1} starts.")
+
+            model.partial_fit(X, y, classes=range(1, len(NewsCategory) + 1))
+        for j in range(0, len(dataset_test), BATCH_COUNT):   
+            X_test = []
+            y_test = []
+            scores = []
+            for c in dataset_test[j: j + BATCH_COUNT]:
+                X_test.append(proceed_problem2(c['headline']))
+                y_test.append(NewsCategory[c['category']].value)   
+            
+            X_test = np.asarray(X_test)
+            y_test = np.asarray(y_test)
+            scores.append(model.score(X_test, y_test))
+        np.average(scores)
+        logger.debug(f"The total score is {scores}.")
 
 def train_svm(
         dataset=NEWS_CATEGORY_DATASET,
@@ -485,7 +529,7 @@ def train_svm(
             model.partial_fit(X, y, classes=range(1, len(NewsCategory) + 1))
 
             if checking_accuracy:
-                logger.debug(f"Accuracy on this round: {svm.score(X, y)}")
+                logger.debug(f"Accuracy on this round: {model.score(X, y)}")
 
             if (j % period_storing_model) == 0:
                 today = datetime.datetime.today().strftime(r"%Y%m%dT%H%M%S")
@@ -493,6 +537,7 @@ def train_svm(
 
     return model
 
+cross_validation()
 
 try:
     svm = load_model(f"model.{MODEL_FILE_EXTENSION}")
