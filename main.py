@@ -647,11 +647,10 @@ def main():
 
 if __name__ == "__main__":
     if sys.argv[1] == "--help":
-        print("""Usage: python main.py [option]
-        option:
-            cv
-                Run `cross_validation`
-        """)
+        print("Usage: python main.py [option]")
+        print("option:")
+        print("    cv")
+        print("        Run `cross_validation`")
     elif sys.argv[1] == "cv":
         cross_validation()
     else:
