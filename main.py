@@ -275,13 +275,14 @@ class Tense:
 
 
 def get_lazily(lazy_list: list, initializer, params=None):
-    logger.debug(f"`{initializer}` was called")
     if not params:
         params = {}
     if len(lazy_list) == 0:
         lazy_list.append(initializer(**params))
+        logger.debug(f"`{initializer}` was called")
     elif not lazy_list[0]:
         lazy_list[0] = initializer(**params)
+        logger.debug(f"`{initializer}` was called")
     return lazy_list[0]
 
 
