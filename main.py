@@ -670,7 +670,7 @@ def main():
         c = proceed_problem3(vec_list)
         categories.append(c)
     representative_category = proceed_problem4(categories)
-    logger.debug(representative_category)
+    logger.debug(f"{url}'s category is {representative_category}.")
 
 
 if __name__ == "__main__":
