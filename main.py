@@ -630,6 +630,7 @@ def main():
     N_URLS = 1
     categories = []
     for _ in range(N_URLS):
+        URL_LIST.clear()  # initialize
         vec_list = []
         url = input("Give a URL to me: ") or "https://buzzfeed.com"
         sentences = proceed_problem1(url)
