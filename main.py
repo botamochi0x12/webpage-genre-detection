@@ -42,22 +42,18 @@ uint = typing.NewType("unsigned_int", int)
 URL = typing.NewType("URL", str)
 Sentence = typing.NewType("Sentence", str)
 
-try:
-    NewsCategory = enum.Enum(
-        "NewsCategory",
-        list(
-            np.loadtxt(
-                "categories.csv",
-                dtype=np.str,
-                delimiter=",",
-                skiprows=1,
-                usecols=0,
-                )
+NewsCategory = enum.Enum(
+    "NewsCategory",
+    list(
+        np.loadtxt(
+            "categories.csv",
+            dtype=np.str,
+            delimiter=",",
+            skiprows=1,
+            usecols=0,
             )
         )
-except OSError as ex:
-    logger.error(ex)
-    raise ex
+    )
 
 # %%
 DELTA = 2
