@@ -11,7 +11,7 @@ import string
 import sys
 import typing
 from typing import Dict, List
-from urllib.parse import splitquery, urljoin
+from urllib.parse import urlparse, urljoin
 
 import numpy as np
 import requests
@@ -148,7 +148,7 @@ def is_duplicated(url, *, tree=None, url_list=URL_LIST, allowing_query=False):
         # NOTE: Optional URL components
         # (such as query & fragment) affect what page is shown.
         if not allowing_query:
-            url_ = splitquery(url_)[0]
+            url_ = urlparse(url_)._replace(query="", fragment="").geturl()
         return url == url_
 
     def with_tree(tree):
