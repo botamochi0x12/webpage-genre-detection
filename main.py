@@ -34,6 +34,7 @@ except NameError:
     logger.setLevel(_logging.DEBUG)
     logger.propagate = False
 
+# TODO: Move initialization of `sym_spell` to another file
 sym_spell = SymSpell(2, 7)
 if not sym_spell.create_dictionary("frequency_dictionary_en_82_765.txt"):
     logger.warning("Symspell isn't loaded!")
@@ -232,6 +233,7 @@ def flatten(nodes, *, sigma=SIGMA, on_demand=False) -> List[Sentence]:
 
 def proceed_problem1(
         url: URL,
+        *,
         delta_: uint = DELTA,
         gamma: uint = GAMMA,
         sigma: uint = SIGMA,
@@ -270,6 +272,17 @@ class Tense:
     past: str
     perfect: str
     id: int
+
+
+def get_lazily(lazy_list: list, initializer, params=None):
+    logger.debug(f"`{initializer}` was called")
+    if not params:
+        params = {}
+    if len(lazy_list) == 0:
+        lazy_list.append(initializer(**params))
+    elif not lazy_list[0]:
+        lazy_list[0] = initializer(**params)
+    return lazy_list[0]
 
 
 # %%
@@ -357,16 +370,18 @@ def load_dictionary() -> Dict[str, Tense]:
     return dictionary
 
 
-try:
-    ENGLISH_WORD_WITH_PARAMETER_DICTIONARY
-except NameError:
-    ENGLISH_WORD_WITH_PARAMETER_DICTIONARY = load_dictionary()
+ENGLISH_WORD_WITH_PARAMETER_DICTIONARIES = [None]
 
 
 def complete_edit_distance(
-    word,
-    english_dictionary=ENGLISH_WORD_WITH_PARAMETER_DICTIONARY
+        word,
+        *,
+        english_dictionary=ENGLISH_WORD_WITH_PARAMETER_DICTIONARIES[0],
 ):
+    if not english_dictionary:
+        english_dictionary = get_lazily(
+            ENGLISH_WORD_WITH_PARAMETER_DICTIONARIES, load_dictionary)
+
     if word in english_dictionary:
         return english_dictionary[word].present
 
@@ -383,7 +398,9 @@ def complete_edit_distance(
 
 def proceed_problem2(
         sentence: Sentence,
-        english_dictionary=ENGLISH_WORD_WITH_PARAMETER_DICTIONARY,
+        *,
+        english_dictionary=ENGLISH_WORD_WITH_PARAMETER_DICTIONARIES[0],
+        stopwords=STOPWORDS,
 ) -> List[int]:
     r"""Creation of a parse vector generated from the input.
     Arguments:
@@ -395,6 +412,9 @@ def proceed_problem2(
     Returns:
         List[int] -- Vector :math:`v` as :math:`{0, 1}
     """
+    if not english_dictionary:
+        english_dictionary = get_lazily(
+            ENGLISH_WORD_WITH_PARAMETER_DICTIONARIES, load_dictionary)
 
     # Create an vector :math:`v` with 0's.
     # TODO: Initiate `vec` as `ndarray`
@@ -402,10 +422,10 @@ def proceed_problem2(
 
     sentence = re.sub(f"[{string.punctuation}{string.digits}]", ' ', sentence)
     words = sentence.split()
-    non_empty_words = (w for w in words if w and w not in STOPWORDS)
+    non_empty_words = (w for w in words if w and w not in stopwords)
     for word in non_empty_words:
         # TODO: Use `word` as a key of the dictionary
-        edited = complete_edit_distance(word, english_dictionary)
+        edited = complete_edit_distance(word)
 
         if edited:  # not (None or empty string)
             vec[english_dictionary[edited].id] = 1
@@ -427,10 +447,7 @@ def load_dataset(path_to_dataset=PATH_TO_DATASET) -> List[Dict[str, str]]:
     return dataset
 
 
-try:
-    NEWS_CATEGORY_DATASET
-except NameError:
-    NEWS_CATEGORY_DATASET = load_dataset()
+NEWS_CATEGORY_DATASET_LIST = [None]
 
 
 def save_model(model, filepath):
@@ -454,12 +471,15 @@ SAMPLE_RATIO = 10
 
 
 def cross_validation(
-        dataset=NEWS_CATEGORY_DATASET,
+        dataset=NEWS_CATEGORY_DATASET_LIST[0],
         sample_ratio=SAMPLE_RATIO,
         verbose=1,
         n=N_GROUPS,
         k=K_FOLDS,
 ):
+
+    if not dataset:
+        dataset = get_lazily(NEWS_CATEGORY_DATASET_LIST, load_dataset)
 
     model: SVM = SVM(tol=0.0001, verbose=verbose, loss='log')
 
@@ -527,12 +547,15 @@ MODEL_FILE_EXTENSION = "svm.pickle"
 
 
 def train_svm(
-        dataset=NEWS_CATEGORY_DATASET,
+        dataset=NEWS_CATEGORY_DATASET_LIST[0],
         *,
         verbose=1,
         period_storing_model=PERIOD_STORING_MODE,
         checking_accuracy=True,
 ) -> SVM:
+
+    if not dataset:
+        dataset = get_lazily(NEWS_CATEGORY_DATASET_LIST, load_dataset)
 
     model: SVM = SVM(tol=0.0001, verbose=verbose, loss='log')
     for i in range(N_EPOCHS):
@@ -575,21 +598,26 @@ def train_svm(
     return model
 
 
-try:
-    svm = load_model(f"model.{MODEL_FILE_EXTENSION}")
-except IOError:
-    logger.warning(
-            (
-                "Start training model "
-                f"because of not found model.{MODEL_FILE_EXTENSION}"
+SVM_LIST = [None]
+
+
+def get_svm():
+    try:
+        svm = load_model(f"model.{MODEL_FILE_EXTENSION}")
+    except IOError:
+        logger.warning(
+                (
+                    "Start training model "
+                    f"because of not found model.{MODEL_FILE_EXTENSION}"
+                )
             )
-        )
-    svm = train_svm()
+        svm = train_svm()
+    return svm
 
 
 def proceed_problem3(
         V,
-        m: SVM = svm,
+        m: SVM = SVM_LIST[0],
 ) -> int:
     r"""Classification of SVM
 
@@ -602,6 +630,8 @@ def proceed_problem3(
     Returns:
         int -- Category :math:`c`
     """
+    if not m:
+        m = get_lazily(SVM_LIST, get_svm)
 
     # Feed each vector :math:`v \in V` to SVM.
     C = m.predict(V)
