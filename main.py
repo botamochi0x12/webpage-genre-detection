@@ -468,7 +468,7 @@ def load_model(filepath) -> SVM:
 N_EPOCHS = 5
 N_GROUPS = 12
 K_FOLDS = 3
-SAMPLE_RATIO = 10
+SAMPLE_RATIO = 0.1  # 10%
 
 
 def cross_validation(
@@ -485,9 +485,9 @@ def cross_validation(
     model: SVM = SVM(tol=0.0001, verbose=verbose, loss='log')
 
     random.shuffle(dataset)
-    dataset = dataset[:(len(dataset) // sample_ratio)]
     part_size = len(dataset) // n
     cluster_size = n // k
+    dataset = dataset[:int(len(dataset) * sample_ratio)]
 
     for i in range(k):
 
