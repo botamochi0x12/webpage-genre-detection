@@ -494,9 +494,10 @@ def cross_validation(
         logger.debug("Random state was loaded successfully.")
 
     random.shuffle(dataset)
-    part_size = len(dataset) // n
-    cluster_size = n // k
     dataset = dataset[:int(len(dataset) * sample_ratio)]
+
+    part_size = len(dataset) // n  # [Dataset / Group]
+    cluster_size = n // k  # [Group / Cluster]
 
     model: SVM = SVM(tol=0.0001, verbose=verbose, loss='log')
     for i in range(k):
@@ -504,7 +505,10 @@ def cross_validation(
         logger.debug(f"Clustering {i} starts.")
 
         dataset_train = dataset[
-            i * part_size: i * part_size + cluster_size * part_size]
+            i * part_size:  # [(Cluster * Dataset) / Group]
+            i * part_size  # [(Cluster * Dataset) / Group]
+            + cluster_size * part_size  # [Dataset / Cluster]
+            ]
         dataset_test = [x for x in dataset if x not in dataset_train]
 
         logger.debug("The train part starts...")
