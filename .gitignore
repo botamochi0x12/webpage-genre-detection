@@ -131,3 +131,4 @@ dmypy.json
 # pickle files for SVM model
 *.svm
 *.svm.pickle
+*.pickle
