@@ -483,7 +483,6 @@ def cross_validation(
     if not dataset:
         dataset = get_lazily(NEWS_CATEGORY_DATASET_LIST, load_dataset)
 
-    model: SVM = SVM(tol=0.0001, verbose=verbose, loss='log')
     if not randstate:
         randstate = random.getstate()
         today = datetime.datetime.today().strftime(r"%Y%m%dT%H%M%S")
@@ -499,6 +498,7 @@ def cross_validation(
     cluster_size = n // k
     dataset = dataset[:int(len(dataset) * sample_ratio)]
 
+    model: SVM = SVM(tol=0.0001, verbose=verbose, loss='log')
     for i in range(k):
 
         logger.debug(f"Clustering {i} starts.")
