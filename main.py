@@ -477,12 +477,22 @@ def cross_validation(
         verbose=1,
         n=N_GROUPS,
         k=K_FOLDS,
+        randstate=None,
 ):
 
     if not dataset:
         dataset = get_lazily(NEWS_CATEGORY_DATASET_LIST, load_dataset)
 
     model: SVM = SVM(tol=0.0001, verbose=verbose, loss='log')
+    if not randstate:
+        randstate = random.getstate()
+        today = datetime.datetime.today().strftime(r"%Y%m%dT%H%M%S")
+        with open(f"randstate_{today}.pickle", "wb") as f:
+            pickle.dump(randstate, f)
+        logger.debug("Random state was saved successfully.")
+    else:
+        random.setstate(randstate)
+        logger.debug("Random state was loaded successfully.")
 
     random.shuffle(dataset)
     part_size = len(dataset) // n
