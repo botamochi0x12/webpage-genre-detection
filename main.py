@@ -466,7 +466,6 @@ def load_model(filepath) -> SVM:
 
 
 N_EPOCHS = 5
-N_GROUPS = 12
 K_FOLDS = 3
 SAMPLE_RATIO = 0.1  # 10%
 
@@ -475,7 +474,6 @@ def cross_validation(
         dataset=NEWS_CATEGORY_DATASET_LIST[0],
         sample_ratio=SAMPLE_RATIO,
         verbose=1,
-        n=N_GROUPS,
         k=K_FOLDS,
         randstate=None,
 ):
@@ -496,8 +494,7 @@ def cross_validation(
     random.shuffle(dataset)
     dataset = dataset[:int(len(dataset) * sample_ratio)]
 
-    part_size = len(dataset) // n  # [Dataset / Group]
-    cluster_size = n // k  # [Group / Cluster]
+    cluster_size = int(np.ceil(len(dataset) / k))  # [Dataset / Cluster]
 
     model: SVM = SVM(tol=0.0001, verbose=verbose, loss='log')
     for i in range(k):
@@ -505,9 +502,8 @@ def cross_validation(
         logger.debug(f"Clustering {i} starts.")
 
         dataset_train = dataset[
-            i * part_size:  # [(Cluster * Dataset) / Group]
-            i * part_size  # [(Cluster * Dataset) / Group]
-            + cluster_size * part_size  # [Dataset / Cluster]
+            i * cluster_size:  # [Dataset]
+            (i + 1) * cluster_size  # [Dataset]
             ]
         dataset_test = [x for x in dataset if x not in dataset_train]
 
