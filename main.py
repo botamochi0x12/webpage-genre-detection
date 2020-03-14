@@ -18,6 +18,7 @@ import requests
 from bs4 import BeautifulSoup
 from nltk.corpus import stopwords
 from sklearn.linear_model import SGDClassifier as SVM
+from sklearn.model_selection import ShuffleSplit
 from symspellpy.symspellpy import SymSpell, Verbosity
 
 # Define `logger` only once
@@ -495,18 +496,20 @@ def cross_validation(
     random.shuffle(dataset)
     dataset = dataset[:int(len(dataset) * sample_ratio)]
 
-    cluster_size = int(np.ceil(len(dataset) / k))  # [Dataset / Cluster]
+    ss = ShuffleSplit(
+            k,
+            1 / k,  # test_ratio
+            # 1 - (1 / k),  # train_ratio
+            # random_state=randstate,
+            )
 
-    model: SVM = SVM(tol=0.0001, verbose=verbose, loss='log')
-    for i in range(k):
+    for i, (train_idcs, test_idcs) in enumerate(ss.split(dataset)):
+        dataset_train = [dataset[i] for i in train_idcs]
+        dataset_test = [dataset[i] for i in test_idcs]
+
+        model: SVM = SVM(tol=0.0001, verbose=verbose, loss='log')
 
         logger.debug(f"Clustering {i} starts.")
-
-        dataset_train = dataset[
-            i * cluster_size:  # [Dataset]
-            (i + 1) * cluster_size  # [Dataset]
-            ]
-        dataset_test = [x for x in dataset if x not in dataset_train]
 
         logger.debug("The train part starts...")
 
