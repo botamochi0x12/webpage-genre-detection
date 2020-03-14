@@ -294,7 +294,6 @@ DICTIONARY_PATHS = [
     "WordNet/index.verb",
     ]
 EXCEPTIONAL_DICTIONARY_PATH = "WordNet/exc"
-EDIT_DISTANCE_LIMIT = 12
 
 try:
     stopwords.words
