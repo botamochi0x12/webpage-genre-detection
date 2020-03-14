@@ -373,7 +373,7 @@ def load_dictionary() -> Dict[str, Tense]:
 ENGLISH_WORD_WITH_PARAMETER_DICTIONARIES = [None]
 
 
-def complete_edit_distance(
+def lookup(
         word,
         *,
         english_dictionary=ENGLISH_WORD_WITH_PARAMETER_DICTIONARIES[0],
@@ -425,7 +425,7 @@ def proceed_problem2(
     non_empty_words = (w for w in words if w and w not in stopwords)
     for word in non_empty_words:
         # TODO: Use `word` as a key of the dictionary
-        edited = complete_edit_distance(word)
+        edited = lookup(word)
 
         if edited:  # not (None or empty string)
             vec[english_dictionary[edited].id] = 1
