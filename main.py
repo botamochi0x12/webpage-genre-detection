@@ -440,7 +440,7 @@ def proceed_problem2(
 
 # %%
 PATH_TO_DATASET = 'News_Category_Dataset_v2_new.json'
-BATCH_COUNT = 200
+BATCH_SIZE = 200
 
 
 def load_dataset(path_to_dataset=PATH_TO_DATASET) -> List[Dict[str, str]]:
@@ -465,6 +465,22 @@ def load_model(filepath) -> SVM:
         return model
     raise TypeError(
         f"The loaded object is not a {SVM}. type: {type(model)}")
+
+
+def split_into_batches(dataset, batch_size):
+    for i in range(0, len(dataset), batch_size):
+        # TODO: Initialize `X` and `y` as `ndarray`
+        X = []
+        y = []
+
+        for c in dataset[i:i + batch_size]:
+            X.append(proceed_problem2(c['headline']))
+            y.append(NewsCategory[c['category']].value)
+
+        X = np.asarray(X)
+        y = np.asarray(y)
+
+        yield X, y
 
 
 N_EPOCHS = 5
@@ -513,19 +529,11 @@ def cross_validation(
 
         logger.debug("The train part starts...")
 
-        for j in range(0, len(dataset_train), BATCH_COUNT):
-            # TODO: Initialize `X` and `y` as `ndarray`
-            X = []
-            y = []
-
-            for c in dataset_train[j:j + BATCH_COUNT]:
-                X.append(proceed_problem2(c['headline']))
-                y.append(NewsCategory[c['category']].value)
-
-            X = np.asarray(X)
-            y = np.asarray(y)
-
-            logger.debug(f"The {j + 1}(st|nd|rd|th) train iteration starts.")
+        for j, (X, y) in enumerate(
+            split_into_batches(dataset_train, BATCH_SIZE)
+        ):
+            logger.debug(
+                f"The {BATCH_SIZE * j + 1}st train iter. starts.")
             model.partial_fit(X, y, classes=range(1, len(NewsCategory) + 1))
 
         logger.debug("The train part ended.")
@@ -533,17 +541,11 @@ def cross_validation(
         logger.debug("The test part starts...")
 
         scores = []
-        for j in range(0, len(dataset_test), BATCH_COUNT):
-            X_test = []
-            y_test = []
-            for c in dataset_test[j: j + BATCH_COUNT]:
-                X_test.append(proceed_problem2(c['headline']))
-                y_test.append(NewsCategory[c['category']].value)
-
-            X_test = np.asarray(X_test)
-            y_test = np.asarray(y_test)
-
-            logger.debug(f"The {j + 1}(st|nd|rd|th) test iteration starts.")
+        for j, (X_test, y_test) in enumerate(
+            split_into_batches(dataset_test, BATCH_SIZE)
+        ):
+            logger.debug(
+                f"The {BATCH_SIZE * j + 1}st test iter. starts.")
             scores.append(model.score(X_test, y_test))
 
         ave_score = np.average(scores)
@@ -577,21 +579,10 @@ def train_svm(
         logger.debug(f"The training epoch {i + 1} starts.")
         random.shuffle(dataset)
 
-        for j in range(0, len(dataset), BATCH_COUNT):
-            # TODO: Initialize `X` and `y` as `ndarray`
-            X = []
-            y = []
-
-            for c in dataset[j:j + BATCH_COUNT]:
-                X.append(proceed_problem2(c['headline']))
-                y.append(NewsCategory[c['category']].value)
-
-            X = np.asarray(X)
-            y = np.asarray(y)
-
-            logger.debug(f"The training iteration {j + 1} starts.")
+        for j, (X, y) in enumerate(split_into_batches(dataset, BATCH_SIZE)):
+            logger.debug(f"The training iter. {BATCH_SIZE * j + 1} starts.")
             model.partial_fit(X, y, classes=range(1, len(NewsCategory) + 1))
-            logger.debug(f"The training iteration {j + 1} ended.")
+            logger.debug(f"The training iter. {BATCH_SIZE * j + 1} ended.")
 
             if checking_accuracy:
                 logger.debug(f"Accuracy on this round: {model.score(X, y)}")
