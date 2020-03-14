@@ -554,7 +554,7 @@ def cross_validation(
 
 
 RATIO_OF_TRAINING_SET = 1.0
-PERIOD_STORING_MODE = 1000
+PERIOD_STORING_MODEL = 1000
 MODEL_FILE_EXTENSION = "svm.pickle"
 
 
@@ -562,7 +562,7 @@ def train_svm(
         dataset=NEWS_CATEGORY_DATASET_LIST[0],
         *,
         verbose=1,
-        period_storing_model=PERIOD_STORING_MODE,
+        period_storing_model=PERIOD_STORING_MODEL,
         checking_accuracy=True,
 ) -> SVM:
 
