@@ -688,7 +688,7 @@ def main():
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 1 or sys.argv[1] == "--help":
+    if len(sys.argv) != 2 or sys.argv[1] == "--help":
         print("Usage: python main.py [option]")
         print("option:")
         print("    cv")
