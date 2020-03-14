@@ -385,6 +385,8 @@ def lookup(
     if word in english_dictionary:
         return english_dictionary[word].present
 
+    # NOTE: Also, `nltk.corpus.wordnet` has a look-up function
+
     similar = sym_spell.lookup(word, Verbosity.ALL)
     if not similar:
         return None
