@@ -233,11 +233,11 @@ def flatten(nodes, *, sigma=SIGMA, on_demand=False) -> List[Sentence]:
 
 
 def proceed_problem1(
-        url: URL,
-        *,
-        delta_: uint = DELTA,
-        gamma: uint = GAMMA,
-        sigma: uint = SIGMA,
+    url: URL,
+    *,
+    delta_: uint = DELTA,
+    gamma: uint = GAMMA,
+    sigma: uint = SIGMA,
 ) -> List[Sentence]:
     r"""Create a web page tree to parse
     Arguments:
@@ -375,9 +375,9 @@ ENGLISH_WORD_WITH_PARAMETER_DICTIONARIES = [None]
 
 
 def lookup(
-        word,
-        *,
-        english_dictionary=ENGLISH_WORD_WITH_PARAMETER_DICTIONARIES[0],
+    word,
+    *,
+    english_dictionary=ENGLISH_WORD_WITH_PARAMETER_DICTIONARIES[0],
 ):
     if not english_dictionary:
         english_dictionary = get_lazily(
@@ -400,10 +400,10 @@ def lookup(
 
 
 def proceed_problem2(
-        sentence: Sentence,
-        *,
-        english_dictionary=ENGLISH_WORD_WITH_PARAMETER_DICTIONARIES[0],
-        stopwords=STOPWORDS,
+    sentence: Sentence,
+    *,
+    english_dictionary=ENGLISH_WORD_WITH_PARAMETER_DICTIONARIES[0],
+    stopwords=STOPWORDS,
 ) -> List[int]:
     r"""Creation of a parse vector generated from the input.
     Arguments:
@@ -489,11 +489,11 @@ SAMPLE_RATIO = 0.1  # 10%
 
 
 def cross_validation(
-        dataset=NEWS_CATEGORY_DATASET_LIST[0],
-        sample_ratio=SAMPLE_RATIO,
-        verbose=1,
-        k=K_FOLDS,
-        randstate=None,
+    dataset=NEWS_CATEGORY_DATASET_LIST[0],
+    sample_ratio=SAMPLE_RATIO,
+    verbose=1,
+    k=K_FOLDS,
+    randstate=None,
 ):
 
     if not dataset:
@@ -564,11 +564,11 @@ MODEL_FILE_EXTENSION = "svm.pickle"
 
 
 def train_svm(
-        dataset=NEWS_CATEGORY_DATASET_LIST[0],
-        *,
-        verbose=1,
-        period_storing_model=PERIOD_STORING_MODEL,
-        checking_accuracy=True,
+    dataset=NEWS_CATEGORY_DATASET_LIST[0],
+    *,
+    verbose=1,
+    period_storing_model=PERIOD_STORING_MODEL,
+    checking_accuracy=True,
 ) -> SVM:
 
     if not dataset:
