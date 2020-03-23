@@ -1,0 +1,102 @@
+[
+  {
+    "License": "MIT",
+    "Name": "beautifulsoup4",
+    "Version": "4.8.2"
+  },
+  {
+    "License": "MPL-2.0",
+    "Name": "certifi",
+    "Version": "2019.11.28"
+  },
+  {
+    "License": "LGPL",
+    "Name": "chardet",
+    "Version": "3.0.4"
+  },
+  {
+    "License": "UNKNOWN",
+    "Name": "entrypoints",
+    "Version": "0.3"
+  },
+  {
+    "License": "MIT",
+    "Name": "flake8",
+    "Version": "3.7.9"
+  },
+  {
+    "License": "BSD-like",
+    "Name": "idna",
+    "Version": "2.9"
+  },
+  {
+    "License": "BSD",
+    "Name": "joblib",
+    "Version": "0.14.1"
+  },
+  {
+    "License": "BSD",
+    "Name": "lxml",
+    "Version": "4.5.0"
+  },
+  {
+    "License": "Expat license",
+    "Name": "mccabe",
+    "Version": "0.6.1"
+  },
+  {
+    "License": "Apache License, Version 2.0",
+    "Name": "nltk",
+    "Version": "3.4.5"
+  },
+  {
+    "License": "BSD",
+    "Name": "numpy",
+    "Version": "1.18.2"
+  },
+  {
+    "License": "Expat license",
+    "Name": "pycodestyle",
+    "Version": "2.5.0"
+  },
+  {
+    "License": "MIT",
+    "Name": "pyflakes",
+    "Version": "2.1.1"
+  },
+  {
+    "License": "Apache 2.0",
+    "Name": "requests",
+    "Version": "2.23.0"
+  },
+  {
+    "License": "new BSD",
+    "Name": "scikit-learn",
+    "Version": "0.22.2.post1"
+  },
+  {
+    "License": "BSD",
+    "Name": "scipy",
+    "Version": "1.4.1"
+  },
+  {
+    "License": "MIT",
+    "Name": "six",
+    "Version": "1.14.0"
+  },
+  {
+    "License": "MIT License",
+    "Name": "soupsieve",
+    "Version": "2.0"
+  },
+  {
+    "License": "MIT",
+    "Name": "symspellpy",
+    "Version": "6.5.2"
+  },
+  {
+    "License": "MIT",
+    "Name": "urllib3",
+    "Version": "1.25.8"
+  }
+]
