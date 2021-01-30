@@ -14,7 +14,7 @@ numpy = "*"
 scikit-learn = "*"
 symspellpy = "*"
 nltk = "*"
-lxml = "*"
+lxml = ">=4.6.2"
 
 [requires]
 python_version = "3.8"
