@@ -1,2 +1,0 @@
-#!/bin/env bash
-pip-licenses --format json-license-finder | jq > pip-licenses.json

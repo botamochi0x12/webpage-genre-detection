@@ -37,7 +37,7 @@ except NameError:
 
 # TODO: Move initialization of `sym_spell` to another file
 sym_spell = SymSpell(2, 7)
-if not sym_spell.create_dictionary("frequency_dictionary_en_82_765.txt"):
+if not sym_spell.create_dictionary("assets/frequency_dictionary_en_82_765.txt"):
     logger.warning("Symspell isn't loaded!")
 
 uint = typing.NewType("unsigned_int", int)
@@ -48,7 +48,7 @@ NewsCategory = enum.Enum(
     "NewsCategory",
     list(
         np.loadtxt(
-            "categories.csv",
+            "assets/categories.csv",
             dtype=str,
             delimiter=",",
             skiprows=1,
@@ -289,12 +289,12 @@ def get_lazily(lazy_list: list, initializer, params=None):
 
 # %%
 DICTIONARY_PATHS = [
-    "WordNet/index.adj",
-    "WordNet/index.adv",
-    "WordNet/index.noun",
-    "WordNet/index.verb",
+    "assets/WordNet/index.adj",
+    "assets/WordNet/index.adv",
+    "assets/WordNet/index.noun",
+    "assets/WordNet/index.verb",
     ]
-EXCEPTIONAL_DICTIONARY_PATH = "WordNet/exc"
+EXCEPTIONAL_DICTIONARY_PATH = "assets/WordNet/exc"
 
 try:
     stopwords.words
@@ -439,7 +439,7 @@ def proceed_problem2(
 
 
 # %%
-PATH_TO_DATASET = 'News_Category_Dataset_v2_new.json'
+PATH_TO_DATASET = 'assets/News_Category_Dataset_v2_new.json'
 BATCH_SIZE = 200
 
 
