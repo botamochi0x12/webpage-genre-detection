@@ -1,102 +1,170 @@
 [
   {
-    "License": "MIT",
-    "Name": "beautifulsoup4",
-    "Version": "4.8.2"
+    "licenses": [
+      "MIT License"
+    ],
+    "name": "beautifulsoup4",
+    "version": "4.13.4"
   },
   {
-    "License": "MPL-2.0",
-    "Name": "certifi",
-    "Version": "2019.11.28"
+    "licenses": [
+      "Mozilla Public License 2.0 (MPL 2.0)"
+    ],
+    "name": "certifi",
+    "version": "2025.6.15"
   },
   {
-    "License": "LGPL",
-    "Name": "chardet",
-    "Version": "3.0.4"
+    "licenses": [
+      "MIT License"
+    ],
+    "name": "charset-normalizer",
+    "version": "3.4.2"
   },
   {
-    "License": "UNKNOWN",
-    "Name": "entrypoints",
-    "Version": "0.3"
+    "licenses": [
+      "UNKNOWN"
+    ],
+    "name": "click",
+    "version": "8.2.1"
   },
   {
-    "License": "MIT",
-    "Name": "flake8",
-    "Version": "3.7.9"
+    "licenses": [
+      "UNKNOWN"
+    ],
+    "name": "editdistpy",
+    "version": "0.1.6"
   },
   {
-    "License": "BSD-like",
-    "Name": "idna",
-    "Version": "2.9"
+    "licenses": [
+      "MIT License"
+    ],
+    "name": "flake8",
+    "version": "7.3.0"
   },
   {
-    "License": "BSD",
-    "Name": "joblib",
-    "Version": "0.14.1"
+    "licenses": [
+      "BSD License"
+    ],
+    "name": "idna",
+    "version": "3.10"
   },
   {
-    "License": "BSD",
-    "Name": "lxml",
-    "Version": "4.5.0"
+    "licenses": [
+      "BSD License"
+    ],
+    "name": "joblib",
+    "version": "1.5.1"
   },
   {
-    "License": "Expat license",
-    "Name": "mccabe",
-    "Version": "0.6.1"
+    "licenses": [
+      "BSD License"
+    ],
+    "name": "lxml",
+    "version": "6.0.0"
   },
   {
-    "License": "Apache License, Version 2.0",
-    "Name": "nltk",
-    "Version": "3.4.5"
+    "licenses": [
+      "MIT License"
+    ],
+    "name": "mccabe",
+    "version": "0.7.0"
   },
   {
-    "License": "BSD",
-    "Name": "numpy",
-    "Version": "1.18.2"
+    "licenses": [
+      "Apache Software License"
+    ],
+    "name": "nltk",
+    "version": "3.9.1"
   },
   {
-    "License": "Expat license",
-    "Name": "pycodestyle",
-    "Version": "2.5.0"
+    "licenses": [
+      "BSD License"
+    ],
+    "name": "numpy",
+    "version": "2.3.1"
   },
   {
-    "License": "MIT",
-    "Name": "pyflakes",
-    "Version": "2.1.1"
+    "licenses": [
+      "MIT"
+    ],
+    "name": "pycodestyle",
+    "version": "2.14.0"
   },
   {
-    "License": "Apache 2.0",
-    "Name": "requests",
-    "Version": "2.23.0"
+    "licenses": [
+      "MIT License"
+    ],
+    "name": "pyflakes",
+    "version": "3.4.0"
   },
   {
-    "License": "new BSD",
-    "Name": "scikit-learn",
-    "Version": "0.22.2.post1"
+    "licenses": [
+      "Apache Software License"
+    ],
+    "name": "regex",
+    "version": "2024.11.6"
   },
   {
-    "License": "BSD",
-    "Name": "scipy",
-    "Version": "1.4.1"
+    "licenses": [
+      "Apache Software License"
+    ],
+    "name": "requests",
+    "version": "2.32.4"
   },
   {
-    "License": "MIT",
-    "Name": "six",
-    "Version": "1.14.0"
+    "licenses": [
+      "BSD License"
+    ],
+    "name": "scikit-learn",
+    "version": "1.7.0"
   },
   {
-    "License": "MIT License",
-    "Name": "soupsieve",
-    "Version": "2.0"
+    "licenses": [
+      "BSD License"
+    ],
+    "name": "scipy",
+    "version": "1.16.0"
   },
   {
-    "License": "MIT",
-    "Name": "symspellpy",
-    "Version": "6.5.2"
+    "licenses": [
+      "MIT License"
+    ],
+    "name": "soupsieve",
+    "version": "2.7"
   },
   {
-    "License": "MIT",
-    "Name": "urllib3",
-    "Version": "1.25.8"
+    "licenses": [
+      "MIT License"
+    ],
+    "name": "symspellpy",
+    "version": "6.9.0"
+  },
+  {
+    "licenses": [
+      "BSD License"
+    ],
+    "name": "threadpoolctl",
+    "version": "3.6.0"
+  },
+  {
+    "licenses": [
+      "MIT License; Mozilla Public License 2.0 (MPL 2.0)"
+    ],
+    "name": "tqdm",
+    "version": "4.67.1"
+  },
+  {
+    "licenses": [
+      "UNKNOWN"
+    ],
+    "name": "typing_extensions",
+    "version": "4.14.0"
+  },
+  {
+    "licenses": [
+      "UNKNOWN"
+    ],
+    "name": "urllib3",
+    "version": "2.5.0"
   }
 ]

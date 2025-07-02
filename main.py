@@ -49,7 +49,7 @@ NewsCategory = enum.Enum(
     list(
         np.loadtxt(
             "categories.csv",
-            dtype=np.str,
+            dtype=str,
             delimiter=",",
             skiprows=1,
             usecols=0,
@@ -513,9 +513,9 @@ def cross_validation(
     dataset = dataset[:int(len(dataset) * sample_ratio)]
 
     ss = ShuffleSplit(
-            k,
-            1 / k,  # test_ratio
-            # 1 - (1 / k),  # train_ratio
+            n_splits=k,
+            test_size=1/k,
+            # train_size=1 - 1/k,
             # random_state=randstate,
             )
 
@@ -523,7 +523,7 @@ def cross_validation(
         dataset_train = [dataset[i] for i in train_idcs]
         dataset_test = [dataset[i] for i in test_idcs]
 
-        model: SVM = SVM(tol=0.0001, verbose=verbose, loss='log')
+        model: SVM = SVM(tol=0.0001, verbose=verbose, loss='log_loss')
 
         logger.debug(f"Clustering {i} starts.")
 
@@ -574,7 +574,7 @@ def train_svm(
     if not dataset:
         dataset = get_lazily(NEWS_CATEGORY_DATASET_LIST, load_dataset)
 
-    model: SVM = SVM(tol=0.0001, verbose=verbose, loss='log')
+    model: SVM = SVM(tol=0.0001, verbose=verbose, loss='log_loss')
     for i in range(N_EPOCHS):
         logger.debug(f"The training epoch {i + 1} starts.")
         random.shuffle(dataset)
